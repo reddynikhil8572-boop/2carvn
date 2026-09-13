@@ -1,0 +1,1010 @@
+// EduSphere AI — data model
+//
+// Tenancy: shared database, shared schema. Every tenant-scoped table carries
+// school_id, and PostgreSQL Row-Level Security enforces isolation at the
+// database rather than relying on application-level WHERE clauses. A forgotten
+// WHERE fails closed instead of leaking another school's rows.
+//
+// Prisma has no way to express RLS, so the policies live in a hand-written
+// migration (20260802153000_row_level_security). If you add a tenant-scoped
+// table here you MUST add its policy there too — the schema alone does not
+// protect it, and a table without a policy is readable across tenants.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  // Application connections use the restricted `edusphere_app` role, which is
+  // NOSUPERUSER NOBYPASSRLS so the policies below actually bind.
+  url       = env("DATABASE_URL")
+  // Migrations need DDL, so they run as the owning superuser. Prisma uses
+  // directUrl for migrate/introspect and url for everything else.
+  directUrl = env("DIRECT_DATABASE_URL")
+}
+
+/// Subscription tiers per requirements §16.
+enum SchoolPlan {
+  BASIC // 500 students
+  STANDARD // 2,000
+  PROFESSIONAL // 10,000
+  ENTERPRISE // unlimited + white-label
+}
+
+/// A tenant. Requirements §1 and §4: every institution gets a unique School ID
+/// plus its own branding and optional custom domain.
+model School {
+  id String @id @default(uuid()) @db.Uuid
+
+  /// Human-facing unique identifier shown in the UI and used at login,
+  /// e.g. "SCH-001". Distinct from the surrogate primary key.
+  schoolCode String @unique @map("school_code")
+
+  name String
+  city String?
+
+  // §4 — per-school branding
+  logoUrl      String? @map("logo_url")
+  primaryColor String? @map("primary_color")
+  customDomain String? @unique @map("custom_domain")
+
+  // §16 — subscription
+  plan       SchoolPlan @default(BASIC)
+  studentCap Int?       @map("student_cap")
+  isActive   Boolean    @default(true) @map("is_active")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  users       User[]
+  classes     Class[]
+  enrollments Enrollment[]
+  parentLinks ParentLink[]
+  auditLogs   AuditLog[]
+
+  // §6 course hierarchy
+  courses           Course[]
+  modules           Module[]
+  chapters          Chapter[]
+  lessons           Lesson[]
+  lessonItems       LessonItem[]
+  videoAssets       VideoAsset[]
+  courseAssignments CourseAssignment[]
+
+  // §12 assessments
+  quizzes           Quiz[]
+  quizQuestions     QuizQuestion[]
+  quizOptions       QuizOption[]
+  quizAttempts      QuizAttempt[]
+  quizAnswers       QuizAnswer[]
+  // Named for the level they sit on: `courseAssignments` above attaches a
+  // course to a class; these are the lesson-level task type.
+  lessonAssignments Assignment[]
+  submissions       AssignmentSubmission[]
+  certificates      Certificate[]
+
+  // §7 video tracking
+  videoProgress VideoProgress[]
+  videoEvents   VideoEvent[]
+
+  @@index([isActive])
+  @@map("schools")
+}
+
+/// Requirements §2 and §5. SUPER_ADMIN is the platform owner and sits outside
+/// any school; every other role belongs to exactly one.
+enum UserRole {
+  SUPER_ADMIN
+  SCHOOL_ADMIN
+  TEACHER
+  STUDENT
+  PARENT
+}
+
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+}
+
+model User {
+  id String @id @default(uuid()) @db.Uuid
+
+  /// Null only for SUPER_ADMIN, who operates across tenants. Enforced by a
+  /// CHECK constraint in the RLS migration.
+  schoolId String? @map("school_id") @db.Uuid
+  school   School? @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+
+  email        String
+  passwordHash String  @map("password_hash")
+  name         String
+  avatarUrl    String? @map("avatar_url")
+
+  role   UserRole
+  status UserStatus @default(ACTIVE)
+
+  // Auth hardening, carried over from the previous backend.
+  tokenVersion  Int       @default(0) @map("token_version")
+  loginAttempts Int       @default(0) @map("login_attempts")
+  lockUntil     DateTime? @map("lock_until")
+  lastLoginAt   DateTime? @map("last_login_at")
+
+  // §13 — two-factor authentication (TOTP, RFC 6238).
+  //
+  /// The shared secret, AES-256-GCM encrypted with ENCRYPTION_KEY. Stored
+  /// encrypted rather than plain because it is a password equivalent: anyone
+  /// holding it can mint valid codes forever. See utils/crypto.ts.
+  twoFactorSecret    String?   @map("two_factor_secret")
+  /// Null until enrollment is confirmed with a working code. A secret without
+  /// this timestamp is a half-finished setup and does not gate login.
+  twoFactorEnabledAt DateTime? @map("two_factor_enabled_at")
+  /// Highest RFC 6238 time step already accepted. A TOTP code stays valid for
+  /// its whole window, so without this a code shoulder-surfed or captured in
+  /// transit could be replayed within ~90 seconds.
+  twoFactorLastStep  BigInt?   @map("two_factor_last_step")
+
+  /// Set when this person's identifying details have been overwritten in
+  /// response to an erasure request. The row survives on purpose: grades,
+  /// submissions and certificates hang off it, and those are academic records
+  /// a school must keep. What is gone is the ability to say whose they were.
+  ///
+  /// A tombstone rather than a deletion, and a timestamp rather than a
+  /// boolean, because "when" is the question an auditor asks. See
+  /// `docs/DATA_RETENTION.md` §3.
+  erasedAt DateTime? @map("erased_at")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  taughtClasses      Class[]                @relation("ClassTeacher")
+  enrollments        Enrollment[]
+  childLinks         ParentLink[]           @relation("ParentToChild")
+  parentLinks        ParentLink[]           @relation("ChildToParent")
+  auditLogs          AuditLog[]
+  refreshTokens      RefreshToken[]
+  recoveryCodes      RecoveryCode[]
+  resetTokens        PasswordResetToken[]
+  createdCourses     Course[]               @relation("CourseCreator")
+  quizAttempts       QuizAttempt[]          @relation("QuizAttemptStudent")
+  submissions        AssignmentSubmission[] @relation("SubmissionStudent")
+  gradedWork         AssignmentSubmission[] @relation("SubmissionGrader")
+  certificates       Certificate[]          @relation("CertificateHolder")
+  issuedCertificates Certificate[]          @relation("CertificateIssuer")
+  videoProgress      VideoProgress[]        @relation("VideoWatcher")
+  videoEvents        VideoEvent[]           @relation("VideoEventActor")
+
+  /// Email is unique *per school*, not globally: the same person may hold
+  /// accounts at more than one institution, and two schools must be able to
+  /// have a student with the same address.
+  @@unique([schoolId, email])
+  @@index([schoolId, role])
+  @@map("users")
+}
+
+model Class {
+  id       String @id @default(uuid()) @db.Uuid
+  schoolId String @map("school_id") @db.Uuid
+  school   School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+
+  name         String
+  academicYear String  @map("academic_year")
+  teacherId    String? @map("teacher_id") @db.Uuid
+  teacher      User?   @relation("ClassTeacher", fields: [teacherId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  enrollments       Enrollment[]
+  courseAssignments CourseAssignment[]
+
+  @@unique([schoolId, name, academicYear])
+  @@index([schoolId])
+  @@map("classes")
+}
+
+model Enrollment {
+  id       String @id @default(uuid()) @db.Uuid
+  schoolId String @map("school_id") @db.Uuid
+  school   School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+
+  classId   String @map("class_id") @db.Uuid
+  class     Class  @relation(fields: [classId], references: [id], onDelete: Cascade)
+  studentId String @map("student_id") @db.Uuid
+  student   User   @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  enrolledAt DateTime @default(now()) @map("enrolled_at")
+
+  @@unique([classId, studentId])
+  @@index([schoolId])
+  @@map("enrollments")
+}
+
+/// Requirements §5 lists Parent as a role; §2 marks it optional. The link table
+/// exists so the relationship is modelled from the start, even if the portal
+/// ships later.
+model ParentLink {
+  id       String @id @default(uuid()) @db.Uuid
+  schoolId String @map("school_id") @db.Uuid
+  school   School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+
+  parentId String @map("parent_id") @db.Uuid
+  parent   User   @relation("ParentToChild", fields: [parentId], references: [id], onDelete: Cascade)
+  childId  String @map("child_id") @db.Uuid
+  child    User   @relation("ChildToParent", fields: [childId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@unique([parentId, childId])
+  @@index([schoolId])
+  @@map("parent_links")
+}
+
+/// One issued refresh token.
+///
+/// Refresh tokens were previously stateless, so a stolen one stayed valid for
+/// its full seven days and could not be revoked individually. Tracking them
+/// buys two things: single-token revocation, and theft detection — a rotated
+/// token being presented a second time means someone has a copy, so the whole
+/// family is burned.
+///
+/// Deliberately NOT tenant-scoped: refresh happens before a tenant context is
+/// established, and the row is keyed by an unguessable token hash rather than
+/// by anything a caller supplies. No RLS policy applies to it.
+model RefreshToken {
+  /// SHA-256 of the token's jti. Storing the raw value would mean a database
+  /// leak handed out usable sessions.
+  tokenHash String @id @map("token_hash")
+
+  userId String @map("user_id") @db.Uuid
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  /// Every token descended from one login shares a family. Detecting reuse
+  /// revokes the family, not just the one token, because the attacker and the
+  /// victim both hold descendants of it.
+  familyId String @map("family_id") @db.Uuid
+
+  expiresAt DateTime  @map("expires_at")
+  revokedAt DateTime? @map("revoked_at")
+  /// Set when this token is rotated. Its presence is what makes a replay
+  /// detectable rather than merely stale.
+  rotatedAt DateTime? @map("rotated_at")
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([userId])
+  @@index([familyId])
+  @@index([expiresAt])
+  @@map("refresh_tokens")
+}
+
+/// One single-use two-factor recovery code.
+///
+/// Losing the authenticator device must not lock a user out of their school
+/// permanently, and "email the admin" is not an authentication factor. Ten
+/// codes are issued at enrollment and shown exactly once.
+///
+/// Deliberately NOT tenant-scoped, for the same reason as RefreshToken: the row
+/// is found by an unguessable hash, and consumption happens during login when
+/// no tenant context exists yet. No RLS policy applies to it.
+model RecoveryCode {
+  /// SHA-256 of the code, not bcrypt. The codes are generated with 50 bits of
+  /// entropy rather than chosen by a human, so there is nothing to brute-force
+  /// offline and a plain digest allows a single indexed lookup instead of ten
+  /// sequential comparisons.
+  codeHash String @id @map("code_hash")
+
+  userId String @map("user_id") @db.Uuid
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  /// Set on use. Rows are kept rather than deleted so a support conversation
+  /// can establish that a recovery code was spent and when.
+  usedAt DateTime? @map("used_at")
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([userId])
+  @@map("recovery_codes")
+}
+
+/// One outstanding password-reset link.
+///
+/// Deliberately NOT tenant-scoped, for the same reason as RefreshToken and
+/// RecoveryCode: the whole point of the flow is that the person clicking the
+/// link is not signed in, so there is no tenant context. The row is found only
+/// by the digest of an unguessable token.
+model PasswordResetToken {
+  /// SHA-256 of the token in the emailed link. A leaked database must not hand
+  /// out working reset links, and unlike a password there is nothing to salt —
+  /// the token is already 256 bits of randomness.
+  tokenHash String @id @map("token_hash")
+
+  userId String @map("user_id") @db.Uuid
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  expiresAt DateTime  @map("expires_at")
+  /// Set on use. Kept rather than deleted so a replay is distinguishable from
+  /// a link that never existed.
+  usedAt    DateTime? @map("used_at")
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@map("password_reset_tokens")
+}
+
+/// Requirements §13 — audit logs. Append-only; nothing updates or deletes rows.
+model AuditLog {
+  id       String  @id @default(uuid()) @db.Uuid
+  schoolId String? @map("school_id") @db.Uuid
+  school   School? @relation(fields: [schoolId], references: [id], onDelete: SetNull)
+
+  actorId String? @map("actor_id") @db.Uuid
+  actor   User?   @relation(fields: [actorId], references: [id], onDelete: SetNull)
+
+  action   String
+  entity   String
+  entityId String? @map("entity_id")
+  metadata Json?
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([schoolId, createdAt])
+  @@index([entity, entityId])
+  @@map("audit_logs")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Requirements §6 — course hierarchy.
+//
+//   Course → Module → Chapter → Lesson → Video → Quiz → Assignment → Certificate
+//
+// Read as four levels of containment (Course→Module→Chapter→Lesson), then
+// Video/Quiz/Assignment as ordered *activities within* a Lesson, then
+// Certificate as a course-completion outcome. A strict eight-level chain would
+// put a Quiz inside a Video and a Certificate inside an Assignment.
+// See docs/PHASE2_COURSE_DESIGN.md §1.
+//
+// school_id is carried on EVERY level rather than reached through the parent.
+// It is redundant by one join, and it is what lets each table take the same
+// flat RLS policy the rest of the schema uses. A policy that had to traverse
+// lesson → chapter → module → course to find the tenant would be both slow and
+// easy to get subtly wrong. The redundancy is enforced by a trigger in the
+// migration, not left to application discipline.
+// ─────────────────────────────────────────────────────────────────────────────
+
+enum CourseStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+enum LessonItemKind {
+  VIDEO
+  QUIZ
+  ASSIGNMENT
+}
+
+enum VideoProvider {
+  /// Uploaded to object storage. Not reachable yet — R2 is a later increment.
+  UPLOAD
+  YOUTUBE
+  VIMEO
+}
+
+model Course {
+  id       String @id @default(uuid()) @db.Uuid
+  schoolId String @map("school_id") @db.Uuid
+  school   School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+
+  title       String
+  slug        String
+  description String?
+  subject     String?
+
+  /// Opaque object-storage key. Nothing writes this yet; it is the seam where
+  /// R2 plugs in without a table change. See docs/PHASE2_COURSE_DESIGN.md §7.
+  coverImageKey String? @map("cover_image_key")
+
+  /// Publish state lives on Course and LessonItem only — not on all four
+  /// levels. Eight independent flags is a combinatorial space teachers get
+  /// wrong; a published lesson inside an unpublished chapter is a bug report
+  /// waiting to happen. Modules and chapters are pure structure and inherit.
+  status      CourseStatus @default(DRAFT)
+  publishedAt DateTime?    @map("published_at")
+
+  createdBy String @map("created_by") @db.Uuid
+  creator   User   @relation("CourseCreator", fields: [createdBy], references: [id], onDelete: Restrict)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  modules      Module[]
+  assignments  CourseAssignment[]
+  certificates Certificate[]
+
+  @@unique([schoolId, slug])
+  @@index([schoolId, status])
+  @@map("courses")
+}
+
+model Module {
+  id       String @id @default(uuid()) @db.Uuid
+  schoolId String @map("school_id") @db.Uuid
+  school   School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+
+  courseId String @map("course_id") @db.Uuid
+  course   Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  title    String
+  /// Plain integer, deliberately NOT unique per parent. A unique
+  /// (parent, position) makes every reorder a multi-statement dance around the
+  /// constraint. Reads order by (position, created_at), so ties still break
+  /// deterministically. See docs/PHASE2_COURSE_DESIGN.md §4.5.
+  position Int    @default(0)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  chapters Chapter[]
+
+  @@index([courseId, position])
+  @@index([schoolId])
+  @@map("modules")
+}
+
+model Chapter {
+  id       String @id @default(uuid()) @db.Uuid
+  schoolId String @map("school_id") @db.Uuid
+  school   School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+
+  moduleId String @map("module_id") @db.Uuid
+  module   Module @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+
+  title    String
+  position Int    @default(0)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  lessons Lesson[]
+
+  @@index([moduleId, position])
+  @@index([schoolId])
+  @@map("chapters")
+}
+
+model Lesson {
+  id       String @id @default(uuid()) @db.Uuid
+  schoolId String @map("school_id") @db.Uuid
+  school   School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+
+  chapterId String  @map("chapter_id") @db.Uuid
+  chapter   Chapter @relation(fields: [chapterId], references: [id], onDelete: Cascade)
+
+  title    String
+  summary  String?
+  position Int     @default(0)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  items LessonItem[]
+
+  @@index([chapterId, position])
+  @@index([schoolId])
+  @@map("lessons")
+}
+
+/// The lesson spine: one ordered list of activities, whatever their kind.
+///
+/// Three reasons this exists rather than three independent Video/Quiz/
+/// Assignment tables, in order of weight:
+///
+///  1. Progress needs one stable identity. Phase 3 tracks completion and
+///     Phase 5 hangs XP off it. Pointing at three tables would mean either
+///     three progress tables or a polymorphic FK with no referential
+///     integrity. One lesson_item_id gives a real FK and one join.
+///  2. Ordering across kinds is otherwise undefined. "Watch, then take the
+///     quiz, then submit the assignment" is a single ordered list; independent
+///     position columns per table cannot express it.
+///  3. Publish state lives in one place regardless of kind.
+model LessonItem {
+  id       String @id @default(uuid()) @db.Uuid
+  schoolId String @map("school_id") @db.Uuid
+  school   School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+
+  lessonId String @map("lesson_id") @db.Uuid
+  lesson   Lesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+
+  kind     LessonItemKind
+  title    String
+  position Int            @default(0)
+
+  /// Lets a teacher release content week by week within a published course.
+  isPublished Boolean @default(false) @map("is_published")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  /// Specialised rows share this row's primary key (1:1), so there is no
+  /// orphan risk and no nullable-column soup. A `kind` that disagrees with
+  /// which specialised row exists is refused by a trigger in the migration.
+  ///
+  /// QUIZ and ASSIGNMENT are valid kinds but have no table yet — those arrive
+  /// in the next increment, and the API rejects creating them meanwhile.
+  video      VideoAsset?
+  quiz       Quiz?
+  assignment Assignment?
+
+  // §7 — progress and the raw event log both key on the spine.
+  videoProgress VideoProgress[]
+  videoEvents   VideoEvent[]
+
+  @@index([lessonId, position])
+  @@index([schoolId])
+  @@map("lesson_items")
+}
+
+/// Video *metadata* only. Nothing here records watching — §7 tracking
+/// (video_progress, video_events) is Phase 3 and keys on lessonItemId, which
+/// is precisely why the spine exists.
+model VideoAsset {
+  /// Both primary key and foreign key: strictly one asset per lesson item.
+  lessonItemId String     @id @map("lesson_item_id") @db.Uuid
+  lessonItem   LessonItem @relation(fields: [lessonItemId], references: [id], onDelete: Cascade)
+
+  schoolId String @map("school_id") @db.Uuid
+  school   School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+
+  /// Object-storage seam, as on Course. Unpopulated until R2 lands; until then
+  /// a course is made usable via provider + externalUrl.
+  storageKey String? @map("storage_key")
+
+  provider    VideoProvider @default(YOUTUBE)
+  externalUrl String?       @map("external_url")
+
+  durationSeconds Int? @map("duration_seconds")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([schoolId])
+  @@map("video_assets")
+}
+
+/// How a course reaches students: schools teach a syllabus to a class, and the
+/// existing Enrollment (class ↔ student) then answers "who may see this
+/// course" with one join. Per-student enrolment can be added later without
+/// changing this.
+model CourseAssignment {
+  id       String @id @default(uuid()) @db.Uuid
+  schoolId String @map("school_id") @db.Uuid
+  school   School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+
+  courseId String @map("course_id") @db.Uuid
+  course   Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  classId  String @map("class_id") @db.Uuid
+  class    Class  @relation(fields: [classId], references: [id], onDelete: Cascade)
+
+  assignedAt DateTime @default(now()) @map("assigned_at")
+
+  @@unique([courseId, classId])
+  @@index([schoolId])
+  @@index([classId])
+  @@map("course_assignments")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Requirements §12 — quizzes and auto-grading.
+//
+// Questions and options are relational rather than JSONB. That costs two joins
+// and buys a real foreign key from quiz_answers to quiz_options, which is what
+// makes "the answer refers to an option belonging to a different question"
+// unrepresentable rather than merely unlikely. The composite FK enforcing that
+// is added by hand in the migration — Prisma cannot express it without
+// claiming the same scalar field for two relations.
+// ─────────────────────────────────────────────────────────────────────────────
+
+enum AttemptStatus {
+  IN_PROGRESS
+  SUBMITTED
+  /// The window closed before the student submitted. Graded on whatever was
+  /// saved, and distinguishable from a normal submission for a teacher.
+  EXPIRED
+}
+
+model Quiz {
+  /// Shares the spine's primary key, exactly as VideoAsset does.
+  lessonItemId String     @id @map("lesson_item_id") @db.Uuid
+  lessonItem   LessonItem @relation(fields: [lessonItemId], references: [id], onDelete: Cascade)
+
+  schoolId String @map("school_id") @db.Uuid
+  school   School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+
+  instructions String?
+
+  /// Percentage of available points needed to pass.
+  passingScore     Int     @default(60) @map("passing_score")
+  timeLimitMinutes Int?    @map("time_limit_minutes")
+  maxAttempts      Int     @default(1) @map("max_attempts")
+  shuffleQuestions Boolean @default(false) @map("shuffle_questions")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  questions QuizQuestion[]
+  attempts  QuizAttempt[]
+
+  @@index([schoolId])
+  @@map("quizzes")
+}
+
+model QuizQuestion {
+  id       String @id @default(uuid()) @db.Uuid
+  schoolId String @map("school_id") @db.Uuid
+  school   School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+
+  quizId String @map("quiz_id") @db.Uuid
+  quiz   Quiz   @relation(fields: [quizId], references: [lessonItemId], onDelete: Cascade)
+
+  prompt   String
+  position Int    @default(0)
+  points   Int    @default(1)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  options QuizOption[]
+  answers QuizAnswer[]
+
+  @@index([quizId, position])
+  @@index([schoolId])
+  @@map("quiz_questions")
+}
+
+model QuizOption {
+  id       String @id @default(uuid()) @db.Uuid
+  schoolId String @map("school_id") @db.Uuid
+  school   School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+
+  questionId String       @map("question_id") @db.Uuid
+  question   QuizQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  text     String
+  position Int    @default(0)
+
+  /// NEVER include this in a student-facing read. Under Prisma a careless
+  /// `include: { questions: { include: { options: true } } }` leaks it by
+  /// default and looks entirely reasonable in review — which is why every
+  /// student read goes through the one shared projection in
+  /// services/quizProjection.ts and a test asserts the serialised body.
+  isCorrect Boolean @default(false) @map("is_correct")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  answers QuizAnswer[]
+
+  /// Referenced by the hand-written composite foreign key on quiz_answers.
+  @@unique([questionId, id])
+  @@index([questionId, position])
+  @@index([schoolId])
+  @@map("quiz_options")
+}
+
+model QuizAttempt {
+  id       String @id @default(uuid()) @db.Uuid
+  schoolId String @map("school_id") @db.Uuid
+  school   School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+
+  quizId String @map("quiz_id") @db.Uuid
+  quiz   Quiz   @relation(fields: [quizId], references: [lessonItemId], onDelete: Cascade)
+
+  studentId String @map("student_id") @db.Uuid
+  student   User   @relation("QuizAttemptStudent", fields: [studentId], references: [id], onDelete: Cascade)
+
+  /// 1-based. The unique constraint below is the attempt limit: the row is
+  /// created up front, so exceeding the maximum is a constraint violation
+  /// rather than a count-then-insert check two concurrent requests can both
+  /// pass. See docs/PHASE2_COURSE_DESIGN.md §5.2.
+  attemptNumber Int @map("attempt_number")
+
+  /// Both recorded by the SERVER. The previous implementation read startedAt
+  /// from the request body, so a client sending the current time had no time
+  /// limit at all and the check was decoration.
+  startedAt DateTime  @default(now()) @map("started_at")
+  expiresAt DateTime? @map("expires_at")
+
+  submittedAt DateTime?     @map("submitted_at")
+  status      AttemptStatus @default(IN_PROGRESS)
+
+  pointsEarned   Int?     @map("points_earned")
+  pointsPossible Int?     @map("points_possible")
+  passed         Boolean?
+
+  /// Browser-reported signals (tab switches and similar). ADVISORY ONLY —
+  /// nothing here ever fails a submission automatically. The client counts
+  /// these about itself, so treating them as a control would be trusting the
+  /// party being measured. The legacy name, `cheatingFlags`, implied
+  /// otherwise.
+  integrityFlags Json? @map("integrity_flags")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  answers QuizAnswer[]
+
+  @@unique([quizId, studentId, attemptNumber])
+  @@index([schoolId])
+  @@index([studentId])
+  @@map("quiz_attempts")
+}
+
+model QuizAnswer {
+  id       String @id @default(uuid()) @db.Uuid
+  schoolId String @map("school_id") @db.Uuid
+  school   School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+
+  attemptId String      @map("attempt_id") @db.Uuid
+  attempt   QuizAttempt @relation(fields: [attemptId], references: [id], onDelete: Cascade)
+
+  questionId String       @map("question_id") @db.Uuid
+  question   QuizQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  selectedOptionId String     @map("selected_option_id") @db.Uuid
+  selectedOption   QuizOption @relation(fields: [selectedOptionId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  /// One answer per question per attempt.
+  @@unique([attemptId, questionId])
+  @@index([schoolId])
+  @@map("quiz_answers")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Requirements §12 — assignments and manual grading.
+//
+// Grading is points-based. A letter grade is derivable from a percentage via a
+// school-level scale later, and rubrics would be an additive table rather than
+// a change to what is stored here, so this is the low-regret default rather
+// than a decision that forecloses the others.
+// ─────────────────────────────────────────────────────────────────────────────
+
+enum SubmissionStatus {
+  SUBMITTED
+  GRADED
+  /// Sent back for revision. The student may submit again; a GRADED one is
+  /// final.
+  RETURNED
+}
+
+model Assignment {
+  /// Shares the spine's primary key, as VideoAsset and Quiz do.
+  lessonItemId String     @id @map("lesson_item_id") @db.Uuid
+  lessonItem   LessonItem @relation(fields: [lessonItemId], references: [id], onDelete: Cascade)
+
+  schoolId String @map("school_id") @db.Uuid
+  school   School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+
+  instructions String?
+  dueAt        DateTime? @map("due_at")
+  maxPoints    Int       @default(100) @map("max_points")
+
+  /// Whether a submission after dueAt is accepted at all. Lateness itself is
+  /// decided by the server against the stored dueAt — the client never says
+  /// when it submitted.
+  allowsLate Boolean @default(true) @map("allows_late")
+
+  /// File attachments need object storage, which is not wired up. The column
+  /// and flag exist so the seam is visible; the API refuses a file submission
+  /// with a clear message rather than accepting one it cannot store.
+  allowsFile Boolean @default(false) @map("allows_file")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  submissions AssignmentSubmission[]
+
+  @@index([schoolId])
+  @@map("assignments")
+}
+
+model AssignmentSubmission {
+  id       String @id @default(uuid()) @db.Uuid
+  schoolId String @map("school_id") @db.Uuid
+  school   School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+
+  assignmentId String     @map("assignment_id") @db.Uuid
+  assignment   Assignment @relation(fields: [assignmentId], references: [lessonItemId], onDelete: Cascade)
+
+  studentId String @map("student_id") @db.Uuid
+  student   User   @relation("SubmissionStudent", fields: [studentId], references: [id], onDelete: Cascade)
+
+  submittedAt DateTime @default(now()) @map("submitted_at")
+  bodyText    String?  @map("body_text")
+
+  /// Object-storage seam. Nothing writes this yet.
+  fileKey String? @map("file_key")
+
+  /// Decided by the server by comparing submittedAt with the assignment's
+  /// stored dueAt. Recorded rather than derived on read, so a later change to
+  /// the due date does not retroactively make past work late.
+  isLate Boolean @default(false) @map("is_late")
+
+  status   SubmissionStatus @default(SUBMITTED)
+  points   Int?
+  feedback String?
+
+  gradedBy String?   @map("graded_by") @db.Uuid
+  grader   User?     @relation("SubmissionGrader", fields: [gradedBy], references: [id], onDelete: SetNull)
+  gradedAt DateTime? @map("graded_at")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  /// One submission per student per assignment; resubmission updates it.
+  @@unique([assignmentId, studentId])
+  @@index([schoolId])
+  @@index([studentId])
+  @@map("assignment_submissions")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Requirements §10 — certificates.
+//
+// The PDF is rendered on demand rather than stored. That sidesteps object
+// storage, which is out of scope, but it is also the better design: a revoked
+// certificate stops rendering immediately instead of leaving a live file in a
+// bucket, and there is no storage to keep consistent with the database.
+// ─────────────────────────────────────────────────────────────────────────────
+
+model Certificate {
+  id       String @id @default(uuid()) @db.Uuid
+  schoolId String @map("school_id") @db.Uuid
+  school   School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+
+  courseId String @map("course_id") @db.Uuid
+  /// Restrict, not Cascade. A certificate that evaporates because a teacher
+  /// tidied up an old course is a credential the holder can no longer prove.
+  course   Course @relation(fields: [courseId], references: [id], onDelete: Restrict)
+
+  studentId String @map("student_id") @db.Uuid
+  student   User   @relation("CertificateHolder", fields: [studentId], references: [id], onDelete: Restrict)
+
+  /// Public identifier, quoted on the artefact and used for verification.
+  /// Random rather than sequential: the verification endpoint is unauthenticated,
+  /// so a guessable serial would let anyone enumerate a school's graduates.
+  serial String @unique
+
+  /// Denormalised at issue time so the credential stays meaningful if the
+  /// course is later renamed or the holder's account is edited. A certificate
+  /// is a record of what was true when it was awarded.
+  courseTitle String @map("course_title")
+  studentName String @map("student_name")
+  schoolName  String @map("school_name")
+
+  issuedAt DateTime @default(now()) @map("issued_at")
+  issuedBy String   @map("issued_by") @db.Uuid
+  issuer   User     @relation("CertificateIssuer", fields: [issuedBy], references: [id], onDelete: Restrict)
+
+  /// Revocation is a state, not a deletion: a verifier asking about a revoked
+  /// certificate must be told it was revoked, not that it never existed.
+  revokedAt    DateTime? @map("revoked_at")
+  revokeReason String?   @map("revoke_reason")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  /// One live certificate per student per course. Expressed as a PARTIAL
+  /// unique index in the migration (`WHERE revoked_at IS NULL`), which Prisma
+  /// cannot declare — so a revoked one does not block reissue.
+  @@index([schoolId])
+  @@index([courseId, studentId])
+  @@map("certificates")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Requirements §7 — video tracking.
+//
+// Only the browser knows where the playhead is, so unlike the quiz timer and
+// the submission time this CANNOT be moved to the server. The client is
+// reporting on something it has an interest in and there is no way around
+// that. So instead of trusting it or ignoring it, every claim is **bounded**:
+// a heartbeat can never credit more watch time than has actually elapsed on
+// the server's clock since the previous one. See video.service.ts.
+//
+// Two tables on purpose. Progress is the answer to "how far is this student",
+// read constantly and updated in place. Events are the raw log — append-only,
+// never updated — which is what makes it possible to ask a question later that
+// nobody has thought of yet, and to audit a progress row that looks wrong.
+// ─────────────────────────────────────────────────────────────────────────────
+
+enum VideoEventType {
+  PLAY
+  PAUSE
+  SEEK
+  ENDED
+  /// Periodic position report while playing, ~every 15s.
+  HEARTBEAT
+}
+
+model VideoProgress {
+  id       String @id @default(uuid()) @db.Uuid
+  schoolId String @map("school_id") @db.Uuid
+  school   School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+
+  /// Keyed on the spine, not on video_assets — this is exactly why the spine
+  /// exists (design §3.2). Phase 5 hangs XP and streaks off the same column.
+  lessonItemId String     @map("lesson_item_id") @db.Uuid
+  lessonItem   LessonItem @relation(fields: [lessonItemId], references: [id], onDelete: Cascade)
+
+  studentId String @map("student_id") @db.Uuid
+  student   User   @relation("VideoWatcher", fields: [studentId], references: [id], onDelete: Cascade)
+
+  /// Credited watch time, in seconds. NOT the client's claim — the running
+  /// total of per-heartbeat increments after each has been clamped to real
+  /// elapsed time.
+  watchedSeconds Int @default(0) @map("watched_seconds")
+
+  /// Where to resume. Distinct from `furthestPositionSeconds`: rewinding
+  /// moves this back but must not reduce how far the student has reached.
+  lastPositionSeconds     Int @default(0) @map("last_position_seconds")
+  furthestPositionSeconds Int @default(0) @map("furthest_position_seconds")
+
+  /// Derived from furthest position over the asset's duration, so scrubbing
+  /// to the end does not by itself count as watching — watchedSeconds is the
+  /// honest measure and both are stored.
+  percentComplete Int       @default(0) @map("percent_complete")
+  completedAt     DateTime? @map("completed_at")
+
+  /// Incremented when the student seeks backwards past a threshold — §7 asks
+  /// for replays, and a backwards seek is the only signal available.
+  replayCount Int @default(0) @map("replay_count")
+
+  /// Last reported, for §7's device breakdown. Advisory, like integrity flags.
+  lastPlaybackRate Float?  @map("last_playback_rate")
+  lastDevice       String? @map("last_device")
+
+  firstWatchedAt DateTime @default(now()) @map("first_watched_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  /// One row per student per video.
+  @@unique([lessonItemId, studentId])
+  @@index([schoolId])
+  @@index([studentId])
+  @@map("video_progress")
+}
+
+/// Append-only. Nothing updates or deletes these, exactly like audit_logs.
+model VideoEvent {
+  id       String @id @default(uuid()) @db.Uuid
+  schoolId String @map("school_id") @db.Uuid
+  school   School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+
+  lessonItemId String     @map("lesson_item_id") @db.Uuid
+  lessonItem   LessonItem @relation(fields: [lessonItemId], references: [id], onDelete: Cascade)
+
+  studentId String @map("student_id") @db.Uuid
+  student   User   @relation("VideoEventActor", fields: [studentId], references: [id], onDelete: Cascade)
+
+  type            VideoEventType
+  positionSeconds Int            @map("position_seconds")
+  playbackRate    Float?         @map("playback_rate")
+  device          String?
+
+  /// How much watch time this event was CREDITED, after clamping. Storing it
+  /// alongside the raw claim is what makes a suspicious progress row
+  /// explainable months later.
+  claimedSeconds  Int? @map("claimed_seconds")
+  creditedSeconds Int? @map("credited_seconds")
+
+  /// Server clock. The client does not get to say when this happened.
+  occurredAt DateTime @default(now()) @map("occurred_at")
+
+  @@index([schoolId, occurredAt])
+  @@index([lessonItemId, studentId])
+  @@map("video_events")
+}
