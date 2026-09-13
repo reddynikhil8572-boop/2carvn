@@ -17,6 +17,56 @@ npm run test         # vitest (frontend suite in src/**)
 Requires `backend-v2` running on `http://localhost:5000` (its CORS allow-list and
 `FRONTEND_URL` both point at `localhost:3000`).
 
+## Deploying
+
+The frontend is deployed to Vercel and the API is deployed as a Render Web Service.
+The repository includes [`vercel.json`](vercel.json) for Vite output and React Router
+fallbacks, and [`render.yaml`](render.yaml) for the API build, start command, and health check.
+
+### 1. Deploy the API to Render
+
+Create a Render Blueprint from this repository, or create a Web Service with:
+
+- Root directory: `backend-v2`
+- Build command: `npm ci && npm run build`
+- Start command: `npm start`
+- Health check path: `/health`
+
+Set the `sync: false` values in [`render.yaml`](render.yaml) in the Render dashboard.
+Generate `ENCRYPTION_KEY` with `openssl rand -base64 32`; it must decode to exactly 32 bytes.
+Use the connection strings and S3-compatible storage credentials from Supabase, AWS S3,
+Cloudflare R2, or another provider. Render generates the JWT and encryption secrets in the
+Blueprint. After the first deploy, copy the API URL, such as `https://edusphere-api.onrender.com`.
+
+Run Prisma migrations once against the production database from a machine with the production
+environment loaded:
+
+```bash
+cd backend-v2
+npm run migrate:deploy
+```
+
+### 2. Deploy the frontend to Vercel
+
+Import the repository into Vercel with the project root set to the repository root. Vercel
+detects the existing Vite configuration. Add this environment variable for Production (and
+Preview if needed):
+
+```text
+VITE_API_BASE_URL=https://edusphere-api.onrender.com
+```
+
+Then update these Render variables to the Vercel URL, without a trailing slash:
+
+```text
+FRONTEND_URL=https://your-app.vercel.app
+CORS_ORIGIN=https://your-app.vercel.app
+BACKEND_URL=https://edusphere-api.onrender.com
+```
+
+Keep `withCredentials` enabled on the frontend, as already configured. The API uses secure,
+cross-site HTTP-only cookies in production, so both deployments must use HTTPS.
+
 ## Configuration
 
 | Variable | Default | Purpose |
