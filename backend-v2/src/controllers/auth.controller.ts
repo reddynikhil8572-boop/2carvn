@@ -20,7 +20,9 @@ import { successResponse, errorResponse } from '../utils/responseFormat';
 import { logger } from '../utils/logger';
 import type { LoginInput } from '../validators/auth.validator';
 
-const isProduction = config.nodeEnv === 'production';
+// Render can retain an older NODE_ENV value when a service is updated outside
+// the Blueprint. An HTTPS public URL still requires production cookie flags.
+const isProduction = config.nodeEnv === 'production' || config.backendUrl.startsWith('https://');
 
 const COOKIE_BASE = {
   httpOnly: true, // unreadable from JS, so XSS cannot exfiltrate the token
