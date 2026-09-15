@@ -29,9 +29,21 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Skeleton } from '@/components/ui/skeleton';
 
 const createSchema = z.object({
-  name: z.string().trim().min(1, 'Name is required').max(200, 'Name must be 200 characters or fewer'),
-  email: z.string().trim().min(1, 'Email is required').email('Enter a valid email address'),
-  password: z.string().trim().optional(),
+  name: z.string().trim().min(2, 'Name must be at least 2 characters').max(120, 'Name must be 120 characters or fewer'),
+  email: z.string().trim().min(1, 'Email is required').email('Enter a valid email address').max(255, 'Email is too long'),
+  password: z
+    .string()
+    .trim()
+    .superRefine((value, context) => {
+      if (!value) return;
+      if (value.length < 8) context.addIssue({ code: 'too_small', minimum: 8, type: 'string', inclusive: true, message: 'Password must be at least 8 characters' });
+      if (value.length > 128) context.addIssue({ code: 'too_big', maximum: 128, type: 'string', inclusive: true, message: 'Password is too long' });
+      if (!/[a-z]/.test(value)) context.addIssue({ code: 'custom', message: 'Password must contain a lowercase letter' });
+      if (!/[A-Z]/.test(value)) context.addIssue({ code: 'custom', message: 'Password must contain an uppercase letter' });
+      if (!/\d/.test(value)) context.addIssue({ code: 'custom', message: 'Password must contain a number' });
+      if (!/[^A-Za-z0-9]/.test(value)) context.addIssue({ code: 'custom', message: 'Password must contain a symbol' });
+    })
+    .optional(),
   classId: z.string().uuid('Select a class'),
 });
 
