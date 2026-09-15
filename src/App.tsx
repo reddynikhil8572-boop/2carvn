@@ -22,6 +22,7 @@ const CourseEditPage = lazy(() => import('@/pages/courses/course-edit').then((m)
 const ClassesPage = lazy(() => import('@/pages/classes').then((m) => ({ default: m.ClassesPage })));
 const ClassDetailPage = lazy(() => import('@/pages/classes/class-detail').then((m) => ({ default: m.ClassDetailPage })));
 const UsersPage = lazy(() => import('@/pages/users').then((m) => ({ default: m.UsersPage })));
+const StudentsPage = lazy(() => import('@/pages/students').then((m) => ({ default: m.StudentsPage })));
 const UserDetailPage = lazy(() => import('@/pages/users/user-detail').then((m) => ({ default: m.UserDetailPage })));
 const AssignmentsPage = lazy(() => import('@/pages/assignments').then((m) => ({ default: m.AssignmentsPage })));
 const AssignmentDetailPage = lazy(() => import('@/pages/assignments/assignment-detail').then((m) => ({ default: m.AssignmentDetailPage })));
@@ -90,6 +91,7 @@ export const router = createBrowserRouter([
 
       // Users (school-admin roster)
       { path: '/users', element: <RouteFallback><UsersPage /></RouteFallback> },
+      { path: '/students', element: <RequireRole roles={['SCHOOL_ADMIN']}><RouteFallback><StudentsPage /></RouteFallback></RequireRole> },
       { path: '/users/:id', element: <RouteFallback><UserDetailPage /></RouteFallback> },
       { path: '/school-admin/users', element: <RouteFallback><UsersPage /></RouteFallback> },
 

@@ -50,6 +50,7 @@ export function navFor(role: UserRole): NavGroup[] {
       label: 'Management',
       items: [
         { title: 'Classes', href: '/classes', icon: GraduationCap },
+        { title: 'Students', href: '/students', icon: Users },
         { title: 'Users', href: '/users', icon: Users },
       ],
     });
