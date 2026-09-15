@@ -221,9 +221,13 @@ export const createUser = async (
     });
 
     // Outside the transaction: a mail failure must not roll back a user that
-    // was successfully created. requestReset never throws to its caller.
+    // was successfully created or make the browser wait for SMTP.
     if (!chosenPassword && schoolCode) {
-      await requestReset(schoolCode, user.email);
+      void requestReset(schoolCode, user.email).catch((error) => {
+        // The account is valid even when delivery is temporarily unavailable.
+        // The administrator can resend a reset from the normal forgot-password flow.
+        logger.error({ error, email: user.email }, 'Student password setup email failed');
+      });
     }
 
     res.status(201).json(
