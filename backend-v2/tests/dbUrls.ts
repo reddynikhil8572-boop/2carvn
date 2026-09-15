@@ -25,7 +25,6 @@ dotenv.config({ path: path.resolve(process.cwd(), '.env') });
 
 export const OWNER_URL =
   process.env.TEST_DIRECT_DATABASE_URL ||
-  process.env.DIRECT_DATABASE_URL ||
   'postgresql://edusphere:edusphere@localhost:55432/edusphere?schema=public';
 
 export const TEST_DB = process.env.TEST_DB_NAME || 'edusphere_test';

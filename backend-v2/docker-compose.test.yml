@@ -1,0 +1,16 @@
+services:
+  postgres-test:
+    image: postgres:16-alpine
+    container_name: edusphere-postgres-test
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: edusphere
+      POSTGRES_PASSWORD: edusphere
+      POSTGRES_DB: edusphere
+    ports:
+      - "55432:5432"
+    volumes:
+      - edusphere-postgres-test:/var/lib/postgresql/data
+
+volumes:
+  edusphere-postgres-test:
