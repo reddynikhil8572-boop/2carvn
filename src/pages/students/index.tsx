@@ -31,6 +31,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 const createSchema = z.object({
   name: z.string().trim().min(1, 'Name is required').max(200, 'Name must be 200 characters or fewer'),
   email: z.string().trim().min(1, 'Email is required').email('Enter a valid email address'),
+  password: z.string().trim().optional(),
   classId: z.string().uuid('Select a class'),
 });
 
@@ -47,7 +48,7 @@ export function StudentsPage() {
 
   const form = useForm<CreateValues>({
     resolver: zodResolver(createSchema),
-    defaultValues: { name: '', email: '', classId: '' },
+    defaultValues: { name: '', email: '', password: '', classId: '' },
   });
 
   const students = users.filter((person) => person.role === 'STUDENT');
@@ -58,9 +59,14 @@ export function StudentsPage() {
         name: values.name,
         email: values.email,
         role: 'STUDENT',
+        password: values.password || undefined,
       });
       await enrolStudent.mutateAsync(created.id);
-      toast.success(`${values.name} was added to the class`);
+      toast.success(
+        created.mustSetPassword
+          ? `${values.name} was added. A password setup link was sent to ${values.email}.`
+          : `${values.name} was added to the class`,
+      );
       form.reset();
       setSelectedClassId('');
     } catch {
@@ -106,6 +112,18 @@ export function StudentsPage() {
                     <FormItem>
                       <FormLabel>Email</FormLabel>
                       <FormControl><Input type="email" placeholder="jane@school.edu" autoComplete="off" {...field} /></FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="password"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Password <span className="font-normal text-muted-foreground">(optional)</span></FormLabel>
+                      <FormControl><Input type="password" placeholder="Leave blank to email a setup link" autoComplete="new-password" {...field} /></FormControl>
+                      <FormDescription>If blank, the student sets their own password from the email link.</FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}

@@ -34,7 +34,9 @@ export function useEnrolStudent(classId: string) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (studentId: string) => classesApi.enrolStudent(classId, studentId),
-    onSuccess: () =>
-      queryClient.invalidateQueries({ queryKey: classKeys.enrollments(classId) }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: classKeys.enrollments(classId) });
+      queryClient.invalidateQueries({ queryKey: classKeys.all });
+    },
   });
 }

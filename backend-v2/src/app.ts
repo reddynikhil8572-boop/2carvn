@@ -138,7 +138,8 @@ app.use((req: Request, res: Response, next: NextFunction) => {
 // deployments. See config/env.ts.
 // ──────────────────────────────────────────────────────
 const isAllowedOrigin = (origin: string) =>
-  config.corsOrigin.includes(origin) || Boolean(config.corsOriginPattern?.test(origin));
+  (config.corsOrigin.includes(origin) || origin === config.frontendUrl) ||
+  Boolean(config.corsOriginPattern?.test(origin));
 
 if (isProduction && config.corsOrigin.length === 0 && !config.corsOriginPattern) {
   logger.warn('No CORS_ORIGIN configured — all browser origins will be rejected.');
