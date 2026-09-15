@@ -54,7 +54,7 @@ app.use(
 // health checks are never rejected, throttled, or spammed into the logs.
 // ──────────────────────────────────────────────────────
 app.get('/', (_req: Request, res: Response) => {
-  res.status(200).json({ status: 'ok', message: 'EduSphere API is running' });
+  res.status(200).json({ status: 'ok', message: '2carvn API is running' });
 });
 
 app.head('/', (_req: Request, res: Response) => {

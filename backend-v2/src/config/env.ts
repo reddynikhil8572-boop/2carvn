@@ -54,7 +54,7 @@ export const config = {
     : process.env.ENCRYPTION_KEY || '',
 
   // Issuer name shown in authenticator apps next to the account.
-  totpIssuer: process.env.TOTP_ISSUER || 'EduSphere',
+  totpIssuer: process.env.TOTP_ISSUER || '2carvn',
 
   // Outbound mail. SMTP rather than a provider SDK: every provider speaks it,
   // and it lets local development point at a sink container instead of
@@ -68,7 +68,7 @@ export const config = {
   smtpSecure: process.env.SMTP_SECURE === 'true',
   smtpUser: process.env.SMTP_USER || '',
   smtpPassword: process.env.SMTP_PASSWORD || '',
-  mailFrom: process.env.MAIL_FROM || 'EduSphere <no-reply@edusphere.local>',
+  mailFrom: process.env.MAIL_FROM || '2carvn <no-reply@edusphere.local>',
 
   /** How long a password-reset link stays usable. */
   passwordResetTtlMinutes: parseInt(process.env.PASSWORD_RESET_TTL_MINUTES || '60', 10),

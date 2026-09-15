@@ -146,7 +146,7 @@ export const verifyTotp = (
 /**
  * The otpauth:// URI an authenticator scans.
  *
- * The label carries the account and issuer so a user with several EduSphere
+ * The label carries the account and issuer so a user with several 2carvn
  * accounts (a teacher who is also a parent, say) can tell the entries apart.
  */
 export const otpauthUri = (params: {

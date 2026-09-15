@@ -1,4 +1,4 @@
-// EduSphere AI — data model
+// 2carvn AI — data model
 //
 // Tenancy: shared database, shared schema. Every tenant-scoped table carries
 // school_id, and PostgreSQL Row-Level Security enforces isolation at the

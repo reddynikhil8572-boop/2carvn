@@ -80,7 +80,7 @@ export function SuperAdminPanel() {
     <div className="space-y-6">
       <PageHeader
         title="Platform overview"
-        description="All schools on the EduSphere platform."
+        description="All schools on the 2carvn platform."
       />
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <StatCard icon={Building2} label="Total schools" value={isLoading || error ? '…' : schools.length} hint={`${active} active`} delay={0} />

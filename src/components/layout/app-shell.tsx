@@ -36,7 +36,7 @@ export function AppShell() {
           </motion.div>
         </main>
         <footer className="border-t py-4 text-center text-xs text-muted-foreground">
-          EduSphere · Multi-tenant education platform
+          2carvn · Multi-tenant education platform
         </footer>
       </div>
     </div>

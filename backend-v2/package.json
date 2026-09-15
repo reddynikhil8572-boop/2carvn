@@ -1,7 +1,7 @@
 {
   "name": "edusphere-api",
   "version": "0.1.0",
-  "description": "EduSphere AI — multi-tenant LMS API",
+  "description": "2carvn AI — multi-tenant LMS API",
   "main": "dist/server.js",
   "type": "commonjs",
   "scripts": {

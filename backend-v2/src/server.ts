@@ -15,7 +15,7 @@ const startServer = async () => {
   await connectRedis();
 
   const server = app.listen(config.port, () => {
-    logger.info(`EduSphere API running in ${config.nodeEnv} mode on port ${config.port}`);
+    logger.info(`2carvn API running in ${config.nodeEnv} mode on port ${config.port}`);
     // Started after listen: readiness should not wait on housekeeping, and the
     // first tick is one interval away regardless.
     stopScheduler = startScheduler();

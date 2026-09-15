@@ -21,7 +21,7 @@ const router = Router();
 router.get('/', (_req, res) => {
   res.status(200).json({
     success: true,
-    message: 'EduSphere API v1',
+    message: '2carvn API v1',
     data: { version: 'v1', phase: 2 },
   });
 });

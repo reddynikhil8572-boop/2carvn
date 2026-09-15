@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Takes a consistent, restorable dump of the EduSphere database.
+# Takes a consistent, restorable dump of the 2carvn database.
 #
 #   bash scripts/backup.sh
 #

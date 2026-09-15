@@ -14,7 +14,7 @@ interface SidebarProps {
   brand?: string;
 }
 
-export function Sidebar({ role, brand = 'EduSphere' }: SidebarProps) {
+export function Sidebar({ role, brand = '2carvn' }: SidebarProps) {
   const groups = navFor(role);
 
   return (

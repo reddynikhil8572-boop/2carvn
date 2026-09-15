@@ -21,7 +21,7 @@ export function AuthLayout({
           <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-white/15">
             <GraduationCap className="h-5 w-5" aria-hidden />
           </span>
-          <span className="text-lg font-semibold tracking-tight">EduSphere</span>
+          <span className="text-lg font-semibold tracking-tight">2carvn</span>
         </Link>
         <div>
           <motion.h1
@@ -38,7 +38,7 @@ export function AuthLayout({
           </p>
         </div>
         <p className="text-xs text-primary-foreground/60">
-          EduSphere · Privacy-friendly by default
+          2carvn · Privacy-friendly by default
         </p>
       </div>
 
@@ -55,7 +55,7 @@ export function AuthLayout({
             <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
               <GraduationCap className="h-4 w-4" aria-hidden />
             </span>
-            <span className="text-lg font-semibold tracking-tight">EduSphere</span>
+            <span className="text-lg font-semibold tracking-tight">2carvn</span>
           </div>
           {children}
           {footer ? <div className="mt-6 text-center text-sm">{footer}</div> : null}

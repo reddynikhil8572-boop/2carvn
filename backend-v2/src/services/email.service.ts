@@ -97,7 +97,7 @@ const shell = (heading: string, body: string) => `
   <h1 style="font-size:20px;font-weight:700;margin:0 0 16px">${heading}</h1>
   ${body}
   <p style="margin-top:32px;font-size:12px;color:#6b7280">
-    EduSphere — sent automatically, please do not reply.
+    2carvn — sent automatically, please do not reply.
   </p>
 </div>`;
 
@@ -113,12 +113,12 @@ export const passwordResetEmail = (params: {
   resetUrl: string;
   ttlMinutes: number;
 }): Omit<Mail, 'to'> => ({
-  subject: 'Reset your EduSphere password',
+  subject: 'Reset your 2carvn password',
   html: shell(
     'Reset your password',
     `<p style="margin:0;font-size:15px;line-height:1.6">Hello ${escapeHtml(params.name)},</p>
      <p style="font-size:15px;line-height:1.6">
-       We received a request to reset your EduSphere password. This link works once and
+       We received a request to reset your 2carvn password. This link works once and
        expires in ${params.ttlMinutes} minutes.
      </p>
      ${button(params.resetUrl, 'Choose a new password')}
@@ -130,7 +130,7 @@ export const passwordResetEmail = (params: {
   text: [
     `Hello ${params.name},`,
     '',
-    'We received a request to reset your EduSphere password.',
+    'We received a request to reset your 2carvn password.',
     `This link works once and expires in ${params.ttlMinutes} minutes:`,
     '',
     params.resetUrl,
@@ -140,12 +140,12 @@ export const passwordResetEmail = (params: {
 });
 
 export const passwordChangedEmail = (params: { name: string }): Omit<Mail, 'to'> => ({
-  subject: 'Your EduSphere password was changed',
+  subject: 'Your 2carvn password was changed',
   html: shell(
     'Your password was changed',
     `<p style="margin:0;font-size:15px;line-height:1.6">Hello ${escapeHtml(params.name)},</p>
      <p style="font-size:15px;line-height:1.6">
-       Your EduSphere password has just been changed and every signed-in device has been
+       Your 2carvn password has just been changed and every signed-in device has been
        signed out.
      </p>
      <p style="font-size:15px;line-height:1.6">
@@ -157,7 +157,7 @@ export const passwordChangedEmail = (params: { name: string }): Omit<Mail, 'to'>
   text: [
     `Hello ${params.name},`,
     '',
-    'Your EduSphere password has just been changed and every signed-in device has been signed out.',
+    'Your 2carvn password has just been changed and every signed-in device has been signed out.',
     '',
     "If this wasn't you, contact your school administrator immediately.",
   ].join('\n'),

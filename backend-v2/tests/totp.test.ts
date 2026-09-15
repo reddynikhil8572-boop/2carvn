@@ -134,13 +134,13 @@ describe('TOTP', () => {
   });
 
   it('builds an otpauth URI an authenticator can parse', () => {
-    const uri = otpauthUri({ secret: 'JBSWY3DPEHPK3PXP', accountName: 'a@b.test', issuer: 'EduSphere' });
+    const uri = otpauthUri({ secret: 'JBSWY3DPEHPK3PXP', accountName: 'a@b.test', issuer: '2carvn' });
     const parsed = new URL(uri);
 
     expect(parsed.protocol).toBe('otpauth:');
-    expect(decodeURIComponent(parsed.pathname)).toBe('/EduSphere:a@b.test');
+    expect(decodeURIComponent(parsed.pathname)).toBe('/2carvn:a@b.test');
     expect(parsed.searchParams.get('secret')).toBe('JBSWY3DPEHPK3PXP');
-    expect(parsed.searchParams.get('issuer')).toBe('EduSphere');
+    expect(parsed.searchParams.get('issuer')).toBe('2carvn');
     expect(parsed.searchParams.get('digits')).toBe('6');
     expect(parsed.searchParams.get('period')).toBe('30');
   });

@@ -1,4 +1,4 @@
-# EduSphere — Frontend
+# 2carvn — Frontend
 
 Multi-tenant education platform frontend. React 18 + TypeScript + Vite 5 + TanStack Query 5,
 tailwindcss (shadcn-style Radix primitives). Talks to the Prisma/PostgreSQL backend at

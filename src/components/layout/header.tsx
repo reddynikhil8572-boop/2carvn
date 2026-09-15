@@ -50,7 +50,7 @@ export function Header() {
           </SheetTrigger>
           <SheetContent side="left" className="w-72 p-0">
             <SheetTitle className="sr-only">Navigation</SheetTitle>
-            <SheetDescription className="sr-only">EduSphere navigation</SheetDescription>
+            <SheetDescription className="sr-only">2carvn navigation</SheetDescription>
             <Sidebar role={user?.role ?? 'STUDENT'} />
           </SheetContent>
         </Sheet>
