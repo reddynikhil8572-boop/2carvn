@@ -49,23 +49,26 @@ npm run migrate:deploy
 ### 2. Deploy the frontend to Vercel
 
 Import the repository into Vercel with the project root set to the repository root. Vercel
-detects the existing Vite configuration. Add this environment variable for Production (and
-Preview if needed):
+detects the existing Vite configuration.
 
-```text
-VITE_API_BASE_URL=https://edusphere-api.onrender.com
-```
+The frontend calls the API **same-origin by default**: [`vercel.json`](vercel.json) rewrites
+`/api/v1/*` to the Render backend, so the browser talks only to `your-app.vercel.app`. That keeps
+the auth cookies first-party, which matters because the major browsers now block third-party
+cookies by default — a cross-site API would silently drop the session cookies and log the user out
+on the very first authenticated call.
 
-Then update these Render variables to the Vercel URL, without a trailing slash:
+> Set `VITE_API_BASE_URL` to the API URL only if you deliberately want the browser to call the
+> backend directly (bypassing the proxy). If you change the Rewrite destination in `vercel.json`,
+> update it there and leave `VITE_API_BASE_URL` unset.
+
+Then update these Render variables to the Vercel URL, without a trailing slash. They remain
+relevant for any direct API calls (curl, tests) and for `SameSite` behavior if the proxy is removed:
 
 ```text
 FRONTEND_URL=https://your-app.vercel.app
 CORS_ORIGIN=https://your-app.vercel.app
 BACKEND_URL=https://edusphere-api.onrender.com
 ```
-
-Keep `withCredentials` enabled on the frontend, as already configured. The API uses secure,
-cross-site HTTP-only cookies in production, so both deployments must use HTTPS.
 
 ## Configuration
 

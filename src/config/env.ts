@@ -5,10 +5,16 @@
  */
 
 export const env = {
-  apiBaseUrl:
-    import.meta.env.VITE_API_BASE_URL ??
-    (import.meta.env.DEV
+  apiBaseUrl: (() => {
+    const configured = import.meta.env.VITE_API_BASE_URL?.trim();
+    if (configured) return configured.replace(/\/+$/, '');
+
+    // Same-origin by default: in production the frontend proxies `/api/v1` to the
+    // backend (see vercel.json), so the auth cookies are first-party and are not
+    // subject to third-party cookie blocking. In dev the API runs locally.
+    return import.meta.env.DEV
       ? `${window.location.protocol}//${window.location.hostname}:5000`
-      : 'https://edusphere-api.onrender.com'),
+      : window.location.origin;
+  })(),
   appName: import.meta.env.VITE_APP_NAME ?? '2carvn',
 } as const;
