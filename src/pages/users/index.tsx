@@ -9,7 +9,7 @@ import { toast } from 'sonner';
 
 import { useAuthUser } from '@/stores/auth';
 import { useCreateUser, useUsers } from '@/hooks/useUsers';
-import { isSchoolAdmin, roleLabel } from '@/lib/utils';
+import { isOrganiser, roleLabel } from '@/lib/utils';
 import { EmptyState } from '@/components/empty-state';
 import { ErrorState } from '@/components/error-state';
 import { PageHeader } from '@/components/page-header';
@@ -53,8 +53,8 @@ import {
 
 import type { UserStatus } from '@/types/api';
 
-/** Roles a school admin may create — mirrors CREATABLE_ROLES, minus SUPER_ADMIN. */
-const CREATABLE_ROLES = ['SCHOOL_ADMIN', 'TEACHER', 'STUDENT', 'PARENT'] as const;
+/** Roles an organiser may create — mirrors the backend validator. */
+const CREATABLE_ROLES = ['TEACHER', 'STUDENT'] as const;
 
 const statusTone: Record<UserStatus, 'secondary' | 'success' | 'warning'> = {
   ACTIVE: 'success',
@@ -78,7 +78,7 @@ type CreateValues = z.infer<typeof createSchema>;
 export function UsersPage() {
   const user = useAuthUser();
   const navigate = useNavigate();
-  const isAdmin = isSchoolAdmin(user?.role ?? 'STUDENT');
+  const isAdmin = isOrganiser(user?.role ?? 'STUDENT');
 
   const { data: users = [], isLoading, error, refetch } = useUsers();
   const createUser = useCreateUser();

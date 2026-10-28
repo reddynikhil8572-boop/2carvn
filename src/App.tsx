@@ -1,8 +1,6 @@
-import { lazy, Suspense, useEffect, type ComponentType, type PropsWithChildren } from 'react';
-import { createBrowserRouter, useNavigate } from 'react-router-dom';
+import { lazy, Suspense, type ComponentType, type PropsWithChildren } from 'react';
+import { createBrowserRouter } from 'react-router-dom';
 
-import { useSession } from '@/hooks/useAuth';
-import { defaultRouteFor } from '@/components/layout/nav';
 import { AppShell } from '@/components/layout/app-shell';
 import { RequireAuth, RequireRole, CenteredLoader } from '@/components/auth/route-guards';
 
@@ -52,31 +50,23 @@ const CertificateVerifyPage = lazyWithReload(() => import('@/pages/certificates/
 const SettingsPage = lazyWithReload(() => import('@/pages/settings').then((m) => ({ default: m.SettingsPage })));
 const SecuritySettingsPage = lazyWithReload(() => import('@/pages/settings/security').then((m) => ({ default: m.SecuritySettingsPage })));
 const SuperAdminSchoolsPage = lazyWithReload(() => import('@/pages/super-admin/schools').then((m) => ({ default: m.SuperAdminSchoolsPage })));
+const AdminDivisionsPage = lazyWithReload(() => import('@/pages/admin/divisions').then((m) => ({ default: m.AdminDivisionsPage })));
+const TeacherAllocationsPage = lazyWithReload(() => import('@/pages/teacher-allocations').then((m) => ({ default: m.TeacherAllocationsPage })));
+const PublicSitePage = lazyWithReload(() => import('@/pages/public').then((m) => ({ default: m.PublicSitePage })));
+const AdminEnquiriesPage = lazyWithReload(() => import('@/pages/admin/enquiries').then((m) => ({ default: m.AdminEnquiriesPage })));
 
 /** Suspense boundary used by every lazy route so the chunk fetch shows a loader. */
 function RouteFallback({ children }: PropsWithChildren) {
   return <Suspense fallback={<CenteredLoader />}>{children}</Suspense>;
 }
 
-function HomeRedirect() {
-  const { loading, authenticated, user } = useSession();
-  const navigate = useNavigate();
-
-  useEffect(() => {
-    if (loading) return;
-    if (!authenticated || !user) {
-      navigate('/login', { replace: true });
-    } else {
-      navigate(defaultRouteFor(user.role), { replace: true });
-    }
-  }, [loading, authenticated, user, navigate]);
-
-  return <CenteredLoader />;
-}
-
 export const router = createBrowserRouter([
   // ── Public ───────────────────────────────────────────────────────────────
-  { path: '/', element: <HomeRedirect /> },
+  { path: '/', element: <RouteFallback><PublicSitePage /></RouteFallback> },
+  { path: '/about', element: <RouteFallback><PublicSitePage /></RouteFallback> },
+  { path: '/catalog', element: <RouteFallback><PublicSitePage /></RouteFallback> },
+  { path: '/programmes', element: <RouteFallback><PublicSitePage /></RouteFallback> },
+  { path: '/contact', element: <RouteFallback><PublicSitePage /></RouteFallback> },
   { path: '/login', element: <RouteFallback><LoginPage /></RouteFallback> },
   { path: '/forgot-password', element: <RouteFallback><ForgotPasswordPage /></RouteFallback> },
   { path: '/reset-password', element: <RouteFallback><ResetPasswordPage /></RouteFallback> },
@@ -99,7 +89,7 @@ export const router = createBrowserRouter([
       {
         path: '/courses/:id/edit',
         element: (
-          <RequireRole roles={['SCHOOL_ADMIN', 'TEACHER']}>
+          <RequireRole roles={['ORGANISER', 'TEACHER']}>
             <RouteFallback><CourseEditPage /></RouteFallback>
           </RequireRole>
         ),
@@ -111,9 +101,19 @@ export const router = createBrowserRouter([
 
       // Users (school-admin roster)
       { path: '/users', element: <RouteFallback><UsersPage /></RouteFallback> },
-      { path: '/students', element: <RequireRole roles={['SCHOOL_ADMIN']}><RouteFallback><StudentsPage /></RouteFallback></RequireRole> },
+      { path: '/students', element: <RequireRole roles={['ORGANISER']}><RouteFallback><StudentsPage /></RouteFallback></RequireRole> },
       { path: '/users/:id', element: <RouteFallback><UserDetailPage /></RouteFallback> },
       { path: '/school-admin/users', element: <RouteFallback><UsersPage /></RouteFallback> },
+
+      // Teacher assignments are role-scoped by the API as well as the route.
+      {
+        path: '/teacher-allocations',
+        element: (
+          <RequireRole roles={['ADMIN', 'ORGANISER', 'TEACHER']}>
+            <RouteFallback><TeacherAllocationsPage /></RouteFallback>
+          </RequireRole>
+        ),
+      },
 
       // Assignments & quizzes (by lesson item)
       { path: '/assignments', element: <RouteFallback><AssignmentsPage /></RouteFallback> },
@@ -130,10 +130,26 @@ export const router = createBrowserRouter([
 
       // Super-admin
       {
-        path: '/super-admin/schools',
+        path: '/admin/schools',
         element: (
-          <RequireRole roles={['SUPER_ADMIN']}>
+          <RequireRole roles={['ADMIN']}>
             <RouteFallback><SuperAdminSchoolsPage /></RouteFallback>
+          </RequireRole>
+        ),
+      },
+      {
+        path: '/admin/divisions',
+        element: (
+          <RequireRole roles={['ADMIN']}>
+            <RouteFallback><AdminDivisionsPage /></RouteFallback>
+          </RequireRole>
+        ),
+      },
+      {
+        path: '/admin/enquiries',
+        element: (
+          <RequireRole roles={['ADMIN']}>
+            <RouteFallback><AdminEnquiriesPage /></RouteFallback>
           </RequireRole>
         ),
       },

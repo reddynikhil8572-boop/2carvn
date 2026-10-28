@@ -76,7 +76,7 @@ beforeAll(async () => {
         email: OWNER,
         passwordHash: await hashPassword(PASSWORD),
         name: 'Owner',
-        role: 'SUPER_ADMIN',
+        role: 'ADMIN',
       },
     });
   });
@@ -104,7 +104,7 @@ beforeAll(async () => {
   });
 
   for (const [email, name, role] of [
-    [ADMIN2, 'Second Admin', 'SCHOOL_ADMIN'],
+    [ADMIN2, 'Second Admin', 'ORGANISER'],
     [TEACHER, 'A Teacher', 'TEACHER'],
     [STUDENT, STUDENT_NAME, 'STUDENT'],
   ] as const) {

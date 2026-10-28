@@ -1,9 +1,20 @@
 import { Outlet, useLocation } from 'react-router-dom';
-import { motion, useReducedMotion } from 'framer-motion';
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 
 import { useAuthUser } from '@/stores/auth';
 import { Sidebar } from '@/components/layout/sidebar';
 import { Header } from '@/components/layout/header';
+
+const pageVariants = {
+  initial: { opacity: 0, y: 12, scale: 0.99 },
+  animate: { opacity: 1, y: 0, scale: 1 },
+  exit: { opacity: 0, y: -6, scale: 0.99 },
+};
+
+const pageTransition = {
+  duration: 0.3,
+  ease: [0.22, 1, 0.36, 1] as [number, number, number, number],
+};
 
 /**
  * Authenticated application shell. Fixed sidebar ≥ lg; drawer on smaller
@@ -26,18 +37,27 @@ export function AppShell() {
       <div className="flex min-h-screen flex-col lg:pl-64">
         <Header />
         <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-6 sm:px-6 lg:px-8">
-          <motion.div
-            key={location.pathname}
-            initial={reduceMotion ? false : { opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.25 }}
-          >
-            <Outlet />
-          </motion.div>
+          <AnimatePresence mode="wait" initial={false}>
+            <motion.div
+              key={location.pathname}
+              variants={reduceMotion ? undefined : pageVariants}
+              initial={reduceMotion ? false : 'initial'}
+              animate="animate"
+              exit={reduceMotion ? undefined : 'exit'}
+              transition={reduceMotion ? undefined : pageTransition}
+            >
+              <Outlet />
+            </motion.div>
+          </AnimatePresence>
         </main>
-        <footer className="border-t py-4 text-center text-xs text-muted-foreground">
+        <motion.footer
+          className="border-t py-4 text-center text-xs text-muted-foreground"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.5, duration: 0.4 }}
+        >
           2carvn · Multi-tenant education platform
-        </footer>
+        </motion.footer>
       </div>
     </div>
   );

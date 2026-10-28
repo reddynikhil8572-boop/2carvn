@@ -46,7 +46,7 @@ publicCertificateRouter.get(
 /** Authenticated: issuing, listing and revoking. */
 export const certificateAdminRouter = Router();
 
-const staffOnly = [requireAuth, requireTenant, requireRole(['SCHOOL_ADMIN', 'TEACHER'])] as const;
+const staffOnly = [requireAuth, requireTenant, requireRole(['ORGANISER', 'TEACHER'])] as const;
 
 certificateAdminRouter.post(
   '/:serial/revoke',

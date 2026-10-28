@@ -6,10 +6,22 @@ import { MotionConfig } from 'framer-motion';
 
 import { router } from './App';
 import { queryClient } from '@/lib/query-client';
-import { ThemeProvider } from '@/components/theme/theme-provider';
+import { ThemeProvider, useTheme } from '@/components/theme/theme-provider';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { Toaster } from '@/components/ui/sonner';
 import './index.css';
+
+function MotionPreference({ children }: { children: React.ReactNode }) {
+  const { motionLevel } = useTheme();
+  return (
+    <MotionConfig
+      reducedMotion={motionLevel === 'minimal' ? 'always' : 'user'}
+      transition={{ duration: motionLevel === 'playful' ? 0.35 : 0.15 }}
+    >
+      {children}
+    </MotionConfig>
+  );
+}
 
 /* eslint-disable-next-line @typescript-eslint/no-non-null-assertion */
 ReactDOM.createRoot(document.getElementById('root')!).render(
@@ -18,9 +30,9 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
       <QueryClientProvider client={queryClient}>
         <TooltipProvider delayDuration={300}>
           {/* Reduced-motion users get instant, unanimated transitions everywhere. */}
-          <MotionConfig reducedMotion="user">
+          <MotionPreference>
             <RouterProvider router={router} />
-          </MotionConfig>
+          </MotionPreference>
           <Toaster position="top-right" richColors closeButton />
         </TooltipProvider>
       </QueryClientProvider>

@@ -43,7 +43,7 @@ export interface ApiErrorBody {
 
 // ── Domain enums (mirror the Prisma schema) ────────────────────────────────
 export type Plan = 'BASIC' | 'STANDARD' | 'PROFESSIONAL' | 'ENTERPRISE';
-export type UserRole = 'SUPER_ADMIN' | 'SCHOOL_ADMIN' | 'TEACHER' | 'STUDENT' | 'PARENT';
+export type UserRole = 'ADMIN' | 'ORGANISER' | 'TEACHER' | 'STUDENT' | 'COORDINATOR';
 export type UserStatus = 'ACTIVE' | 'INACTIVE' | 'SUSPENDED';
 export type CourseStatus = 'DRAFT' | 'PUBLISHED' | 'ARCHIVED';
 export type LessonItemKind = 'VIDEO' | 'QUIZ' | 'ASSIGNMENT';
@@ -53,13 +53,11 @@ export type SubmissionStatus = 'SUBMITTED' | 'GRADED' | 'RETURNED';
 export type VideoEventType = 'PLAY' | 'PAUSE' | 'SEEK' | 'ENDED' | 'HEARTBEAT';
 
 /** The staff roles that may author content. */
-export const STAFF_ROLES = ['SCHOOL_ADMIN', 'TEACHER'] as const;
+export const STAFF_ROLES = ['ORGANISER', 'TEACHER'] as const;
 export type StaffRole = (typeof STAFF_ROLES)[number];
 
-/** Roles a school admin may create (never SUPER_ADMIN — enforced by backend). */
-export const CREATABLE_ROLES: readonly Exclude<UserRole, 'SUPER_ADMIN'>[] = [
-  'SCHOOL_ADMIN',
+/** Roles an organiser may provision. Admin-only roles are excluded. */
+export const CREATABLE_ROLES: readonly Extract<UserRole, 'TEACHER' | 'STUDENT'>[] = [
   'TEACHER',
   'STUDENT',
-  'PARENT',
 ];

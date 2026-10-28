@@ -146,7 +146,7 @@ describe('identity', () => {
   it('refuses a second super admin with an existing address', async () => {
     await asSuperAdmin((tx) =>
       tx.user.create({
-        data: { email: 'dupe@rls.test', passwordHash: 'x', name: 'Owner One', role: 'SUPER_ADMIN' },
+        data: { email: 'dupe@rls.test', passwordHash: 'x', name: 'Owner One', role: 'ADMIN' },
       })
     );
 
@@ -156,7 +156,7 @@ describe('identity', () => {
     await expect(
       asSuperAdmin((tx) =>
         tx.user.create({
-          data: { email: 'dupe@rls.test', passwordHash: 'x', name: 'Owner Two', role: 'SUPER_ADMIN' },
+          data: { email: 'dupe@rls.test', passwordHash: 'x', name: 'Owner Two', role: 'ADMIN' },
         })
       )
     ).rejects.toThrow();

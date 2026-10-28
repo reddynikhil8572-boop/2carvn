@@ -4,7 +4,7 @@
  *
  *   npm run seed
  *
- * Credentials come from SEED_SUPER_ADMIN_EMAIL / SEED_SUPER_ADMIN_PASSWORD.
+ * Credentials come from SEED_ADMIN_EMAIL / SEED_ADMIN_PASSWORD.
  *
  * The development fallback is **refused when NODE_ENV=production**. A warning is
  * not enough: this account is the platform owner, its password is committed in
@@ -18,8 +18,8 @@ import { hashPassword } from '../services/auth.service';
 
 const DEV_FALLBACK_PASSWORD = 'ChangeMe!2026';
 
-const EMAIL = process.env.SEED_SUPER_ADMIN_EMAIL || 'owner@edusphere.local';
-const PASSWORD = process.env.SEED_SUPER_ADMIN_PASSWORD || '';
+const EMAIL = process.env.SEED_ADMIN_EMAIL || process.env.SEED_SUPER_ADMIN_EMAIL || 'owner@edusphere.local';
+const PASSWORD = process.env.SEED_ADMIN_PASSWORD || process.env.SEED_SUPER_ADMIN_PASSWORD || '';
 
 // The same boundary config/env.ts uses for ENCRYPTION_KEY and SMTP_HOST:
 // production is opt-in via NODE_ENV, everything else is treated as local. Being
@@ -35,7 +35,7 @@ const isProduction = process.env.NODE_ENV === 'production';
 
 if (!PASSWORD && isProduction) {
   console.error(
-    'FATAL: SEED_SUPER_ADMIN_PASSWORD is required when NODE_ENV=production.\n' +
+    'FATAL: SEED_ADMIN_PASSWORD is required when NODE_ENV=production.\n' +
       'Generate one with: openssl rand -base64 24'
   );
   process.exit(1);
@@ -45,11 +45,11 @@ const effectivePassword = PASSWORD || DEV_FALLBACK_PASSWORD;
 
 (async () => {
   const existing = await asSuperAdmin((tx) =>
-    tx.user.findFirst({ where: { role: 'SUPER_ADMIN', email: EMAIL } })
+    tx.user.findFirst({ where: { role: 'ADMIN', email: EMAIL } })
   );
 
   if (existing) {
-    console.log(`Super admin already present: ${EMAIL}`);
+    console.log(`Admin already present: ${EMAIL}`);
   } else {
     const passwordHash = await hashPassword(effectivePassword);
     await asSuperAdmin((tx) =>
@@ -58,18 +58,18 @@ const effectivePassword = PASSWORD || DEV_FALLBACK_PASSWORD;
           email: EMAIL,
           passwordHash,
           name: 'Platform Owner',
-          role: 'SUPER_ADMIN',
+          role: 'ADMIN',
           schoolId: null,
         },
       })
     );
-    console.log(`Created super admin: ${EMAIL}`);
+    console.log(`Created admin: ${EMAIL}`);
   }
 
   if (effectivePassword === DEV_FALLBACK_PASSWORD) {
     console.warn(
       'WARNING: using the development seed password. Refused when ' +
-        'NODE_ENV=production — set SEED_SUPER_ADMIN_PASSWORD before any shared use.'
+        'NODE_ENV=production — set SEED_ADMIN_PASSWORD before any shared use.'
     );
   }
 

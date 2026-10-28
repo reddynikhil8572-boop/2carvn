@@ -6,7 +6,7 @@ import { toast } from 'sonner';
 
 import { useAuthUser } from '@/stores/auth';
 import { useEraseUser, useExportUserData, useUsers } from '@/hooks/useUsers';
-import { isSchoolAdmin, roleLabel } from '@/lib/utils';
+import { isOrganiser, roleLabel } from '@/lib/utils';
 import { ErrorState } from '@/components/error-state';
 import {
   AlertDialog,
@@ -56,7 +56,7 @@ export function UserDetailPage() {
   const { id } = useParams<'id'>();
   const currentUser = useAuthUser();
   const navigate = useNavigate();
-  const isAdmin = isSchoolAdmin(currentUser?.role ?? 'STUDENT');
+  const isAdmin = isOrganiser(currentUser?.role ?? 'STUDENT');
 
   const { data: users = [], isLoading, error, refetch } = useUsers();
   const exportUser = useExportUserData();

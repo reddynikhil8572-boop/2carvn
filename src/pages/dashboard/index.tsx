@@ -1,5 +1,5 @@
 import { useAuthUser } from '@/stores/auth';
-import { SuperAdminPanel, SchoolAdminPanel, TeacherPanel, StudentPanel } from '@/pages/dashboard/panels';
+import { AdminPanel, OrganiserPanel, CoordinatorPanel, TeacherPanel, StudentPanel } from '@/pages/dashboard/panels';
 
 /**
  * Role-switching dashboard root. Each role renders its own composition from
@@ -11,14 +11,16 @@ export function DashboardPage() {
   if (!user) return null;
 
   switch (user.role) {
-    case 'SUPER_ADMIN':
-      return <SuperAdminPanel />;
-    case 'SCHOOL_ADMIN':
-      return <SchoolAdminPanel />;
+    case 'ADMIN':
+      return <AdminPanel />;
+    case 'ORGANISER':
+      return <OrganiserPanel />;
     case 'TEACHER':
       return <TeacherPanel />;
     case 'STUDENT':
       return <StudentPanel />;
+    case 'COORDINATOR':
+      return <CoordinatorPanel />;
     default:
       return null;
   }

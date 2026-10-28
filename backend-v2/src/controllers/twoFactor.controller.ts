@@ -30,7 +30,7 @@ import type {
  * requireAuth and manages an existing session's enrollment.
  */
 
-/** Reads the caller's own row. Works for SUPER_ADMIN, who has no tenant. */
+/** Reads the caller's own row. Works for ADMIN, who has no tenant. */
 const loadSelf = (
   userId: string,
   schoolId: string | null,
@@ -69,7 +69,7 @@ export const verify = async (req: Request, res: Response, next: NextFunction): P
     const user = await prisma.$queryRaw<
       {
         school_id: string | null;
-        role: 'SUPER_ADMIN' | 'SCHOOL_ADMIN' | 'TEACHER' | 'STUDENT' | 'PARENT';
+        role: 'ADMIN' | 'ORGANISER' | 'TEACHER' | 'STUDENT' | 'COORDINATOR';
         status: string;
         token_version: number;
         full_name: string;

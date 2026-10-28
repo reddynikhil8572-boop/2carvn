@@ -6,10 +6,11 @@ export const schoolKeys = {
   all: ['schools'] as const,
 };
 
-export function useSchools() {
+export function useSchools(enabled = true) {
   return useQuery({
     queryKey: schoolKeys.all,
     queryFn: schoolsApi.listSchools,
+    enabled,
   });
 }
 

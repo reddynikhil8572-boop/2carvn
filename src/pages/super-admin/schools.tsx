@@ -261,21 +261,21 @@ export function SuperAdminSchoolsPage() {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Primary colour</FormLabel>
-                    <FormControl>
-                      <div className="relative">
-                        <span
-                          className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 rounded-full border border-border"
-                          style={{ backgroundColor: field.value || 'transparent' }}
-                          aria-hidden
-                        />
+                    <div className="relative">
+                      <span
+                        className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 rounded-full border border-border"
+                        style={{ backgroundColor: field.value || 'transparent' }}
+                        aria-hidden
+                      />
+                      <FormControl>
                         <Input
                           {...field}
                           value={field.value ?? ''}
                           placeholder="#0F766E"
                           className="pl-9"
                         />
-                      </div>
-                    </FormControl>
+                      </FormControl>
+                    </div>
                     <FormMessage />
                   </FormItem>
                 )}

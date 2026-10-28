@@ -8,7 +8,7 @@ import { toast } from 'sonner';
 import { useAuthUser } from '@/stores/auth';
 import { useCreateUser, useUsers } from '@/hooks/useUsers';
 import { useClasses, useEnrolStudent } from '@/hooks/useClasses';
-import { isSchoolAdmin } from '@/lib/utils';
+import { isOrganiser } from '@/lib/utils';
 import { PageHeader } from '@/components/page-header';
 import { EmptyState } from '@/components/empty-state';
 import { ErrorState } from '@/components/error-state';
@@ -51,7 +51,7 @@ type CreateValues = z.infer<typeof createSchema>;
 
 export function StudentsPage() {
   const user = useAuthUser();
-  const isAdmin = isSchoolAdmin(user?.role ?? 'STUDENT');
+  const isAdmin = isOrganiser(user?.role ?? 'STUDENT');
   const { data: classes = [], isLoading: classesLoading, error: classesError, refetch } = useClasses();
   const { data: users = [] } = useUsers();
   const createUser = useCreateUser();

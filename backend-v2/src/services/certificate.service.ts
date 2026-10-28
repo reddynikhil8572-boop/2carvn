@@ -1,7 +1,7 @@
 import crypto from 'node:crypto';
 
 import { withTenant, withoutTenant } from '../db/tenantContext';
-import { findEditableCourse, isStaff } from './courseAccess';
+import { findEditableCourse, isStaff, teacherClassAccessFilter } from './courseAccess';
 import { config } from '../config/env';
 import type { TokenPayload } from '../utils/jwt';
 import { renderCertificatePdf, type CertificateView } from '../utils/certificatePdf';
@@ -61,12 +61,20 @@ export const issueCertificate = async (
 ) =>
   withTenant(user.schoolId!, async (tx) => {
     const course = await findEditableCourse(tx, courseId, user);
+    const assignedClassFilter = user.role === 'TEACHER' ? teacherClassAccessFilter(user) : {};
 
     const student = await tx.user.findFirst({
       where: {
         id: studentId,
         role: 'STUDENT',
-        enrollments: { some: { class: { courseAssignments: { some: { courseId } } } } },
+        enrollments: {
+          some: {
+            class: {
+              ...assignedClassFilter,
+              courseAssignments: { some: { courseId } },
+            },
+          },
+        },
       },
       select: { id: true, name: true },
     });
@@ -127,6 +135,19 @@ export const revokeCertificate = async (
     if (!certificate) throw notFound('Certificate not found');
 
     await findEditableCourse(tx, certificate.courseId, user);
+    if (user.role === 'TEACHER') {
+      const teacherMayAccess = await tx.courseAssignment.findFirst({
+        where: {
+          courseId: certificate.courseId,
+          class: {
+            ...teacherClassAccessFilter(user),
+            enrollments: { some: { studentId: certificate.studentId } },
+          },
+        },
+        select: { id: true },
+      });
+      if (!teacherMayAccess) throw notFound('Certificate not found');
+    }
 
     if (certificate.revokedAt) throw conflict('This certificate is already revoked');
 
@@ -156,6 +177,20 @@ export const listCertificates = async (user: TokenPayload, courseId?: string) =>
       where: {
         ...(courseId ? { courseId } : {}),
         ...(isStaff(user.role) ? {} : { studentId: user.userId }),
+        ...(user.role === 'TEACHER'
+          ? {
+              course: {
+                assignments: {
+                  some: { class: teacherClassAccessFilter(user) },
+                },
+              },
+              student: {
+                enrollments: {
+                  some: { class: teacherClassAccessFilter(user) },
+                },
+              },
+            }
+          : {}),
       },
       orderBy: { issuedAt: 'desc' },
     })
@@ -233,5 +268,3 @@ export const renderCertificate = async (serial: string): Promise<Buffer> => {
 
   return renderCertificatePdf(view);
 };
-
-

@@ -111,9 +111,9 @@ export function LoginPage() {
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Email address</FormLabel>
-                <FormControl>
-                  <div className="relative">
-                    <Mail className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" aria-hidden />
+                <div className="relative">
+                  <Mail className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" aria-hidden />
+                  <FormControl>
                     <Input
                       type="email"
                       autoComplete="email"
@@ -121,8 +121,8 @@ export function LoginPage() {
                       className="pl-9"
                       {...field}
                     />
-                  </div>
-                </FormControl>
+                  </FormControl>
+                </div>
                 <FormMessage />
               </FormItem>
             )}
@@ -133,9 +133,9 @@ export function LoginPage() {
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Password</FormLabel>
-                <FormControl>
-                  <div className="relative">
-                    <Lock className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" aria-hidden />
+                <div className="relative">
+                  <Lock className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" aria-hidden />
+                  <FormControl>
                     <Input
                       type="password"
                       autoComplete="current-password"
@@ -143,8 +143,8 @@ export function LoginPage() {
                       className="pl-9"
                       {...field}
                     />
-                  </div>
-                </FormControl>
+                  </FormControl>
+                </div>
                 <FormMessage />
               </FormItem>
             )}

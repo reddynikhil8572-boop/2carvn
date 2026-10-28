@@ -13,7 +13,6 @@ export async function listClasses(): Promise<ClassSummary[]> {
 export interface CreateClassPayload {
   name: string;
   academicYear: string;
-  teacherId?: string;
 }
 
 export async function createClass(payload: CreateClassPayload): Promise<ClassSummary> {

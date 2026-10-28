@@ -2,6 +2,7 @@ import { Prisma } from '@prisma/client';
 import { withTenant } from '../db/tenantContext';
 import type { TokenPayload } from '../utils/jwt';
 import type { CreateClassInput, EnrolInput } from '../validators/class.validator';
+import { teacherClassAccessFilter } from './courseAccess';
 
 /**
  * Classes and enrolment — requirements §2.
@@ -16,40 +17,48 @@ const conflict = (m: string) => Object.assign(new Error(m), { statusCode: 409 })
 const badRequest = (m: string) => Object.assign(new Error(m), { statusCode: 400 });
 
 /**
- * Every role in a school may read the class list — a teacher needs it to
- * attach a course, an admin to manage it. Writing is admin-only, at the route.
+ * School admins can read the school roster. Teachers receive only classes
+ * assigned to them, including the legacy homeroom-teacher link.
  */
-export const listClasses = async (user: TokenPayload) =>
-  withTenant(user.schoolId!, (tx) =>
-    tx.class.findMany({
+export const listClasses = async (user: TokenPayload) => {
+  const today = new Date();
+  today.setUTCHours(0, 0, 0, 0);
+  return withTenant(user.schoolId!, async (tx) => {
+    const classes = await tx.class.findMany({
+      where: user.role === 'TEACHER' ? teacherClassAccessFilter(user) : undefined,
       orderBy: [{ academicYear: 'desc' }, { name: 'asc' }],
       include: {
         teacher: { select: { id: true, name: true } },
+        teacherAllocations: {
+          where: {
+            isActive: true,
+            AND: [
+              { OR: [{ startsAt: null }, { startsAt: { lte: today } }] },
+              { OR: [{ endsAt: null }, { endsAt: { gte: today } }] },
+            ],
+          },
+          select: { teacher: { select: { id: true, name: true } } },
+          orderBy: { createdAt: 'desc' },
+          take: 1,
+        },
         _count: { select: { enrollments: true } },
       },
-    })
-  );
+    });
+    return classes.map(({ teacherAllocations, ...klass }) => ({
+      ...klass,
+      teacher: klass.teacher ?? teacherAllocations[0]?.teacher ?? null,
+    }));
+  });
+};
 
 export const createClass = async (user: TokenPayload, input: CreateClassInput) =>
   withTenant(user.schoolId!, async (tx) => {
-    if (input.teacherId) {
-      // Confirm the teacher exists in this school before pointing a class at
-      // them. RLS makes another school's staff invisible, so this also rejects
-      // a cross-tenant id — as a 400 rather than a foreign-key error.
-      const teacher = await tx.user.findFirst({
-        where: { id: input.teacherId, role: 'TEACHER' },
-        select: { id: true },
-      });
-      if (!teacher) throw badRequest('No such teacher in this school');
-    }
-
     try {
       return await tx.class.create({
         data: {
           schoolId: user.schoolId!,
           name: input.name,
           academicYear: input.academicYear,
-          teacherId: input.teacherId,
         },
       });
     } catch (error) {
@@ -88,7 +97,13 @@ export const enrolStudent = async (user: TokenPayload, classId: string, input: E
 
 export const listEnrollments = async (user: TokenPayload, classId: string) =>
   withTenant(user.schoolId!, async (tx) => {
-    const klass = await tx.class.findUnique({ where: { id: classId }, select: { id: true } });
+    const klass = await tx.class.findFirst({
+      where: {
+        id: classId,
+        ...(user.role === 'TEACHER' ? teacherClassAccessFilter(user) : {}),
+      },
+      select: { id: true },
+    });
     if (!klass) throw notFound('Class not found');
 
     return tx.enrollment.findMany({

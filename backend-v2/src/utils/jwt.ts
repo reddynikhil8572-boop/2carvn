@@ -5,12 +5,12 @@ import { config } from '../config/env';
 export interface TokenPayload {
   userId: string;
   /**
-   * The tenant this session is bound to. Null only for SUPER_ADMIN, who
+   * The tenant this session is bound to. Null only for ADMIN, who
    * operates across schools. Every tenant-scoped request derives its RLS
    * context from this field — see db/tenantContext.ts.
    */
   schoolId: string | null;
-  role: 'SUPER_ADMIN' | 'SCHOOL_ADMIN' | 'TEACHER' | 'STUDENT' | 'PARENT';
+  role: 'ADMIN' | 'ORGANISER' | 'TEACHER' | 'STUDENT' | 'COORDINATOR';
   /** Bumping User.tokenVersion invalidates every token already issued. */
   tokenVersion: number;
 }

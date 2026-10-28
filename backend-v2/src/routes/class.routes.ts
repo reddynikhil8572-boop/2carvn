@@ -30,7 +30,7 @@ const handler =
   };
 
 const tenant = () => [requireAuth, requireTenant] as const;
-const adminOnly = requireRole(['SCHOOL_ADMIN']);
+const adminOnly = requireRole(['ORGANISER']);
 
 router.get(
   '/',

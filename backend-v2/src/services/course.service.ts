@@ -5,6 +5,7 @@ import {
   findEditableCourse,
   findReadableCourse,
   lessonItemReadFilter,
+  teacherClassAccessFilter,
 } from './courseAccess';
 import { quizSelectFor } from './quizProjection';
 import type { TokenPayload } from '../utils/jwt';
@@ -175,7 +176,12 @@ export const getCourseTree = async (user: TokenPayload, courseId: string) =>
             },
           },
         },
-        assignments: { include: { class: { select: { id: true, name: true } } } },
+        assignments: {
+          where: user.role === 'TEACHER'
+            ? { class: teacherClassAccessFilter(user) }
+            : undefined,
+          include: { class: { select: { id: true, name: true } } },
+        },
       },
     });
   });
@@ -332,7 +338,15 @@ export const assignCourseToClass = async (
   withTenant(user.schoolId!, async (tx) => {
     await findEditableCourse(tx, courseId, user);
 
-    const klass = await tx.class.findUnique({ where: { id: classId }, select: { id: true } });
+    const klass = await tx.class.findFirst({
+      where: {
+        id: classId,
+        ...(user.role === 'TEACHER'
+          ? teacherClassAccessFilter(user)
+          : {}),
+      },
+      select: { id: true },
+    });
     if (!klass) throw notFound('Class not found');
 
     const existing = await tx.courseAssignment.findUnique({

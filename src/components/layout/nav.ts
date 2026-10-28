@@ -7,11 +7,13 @@ import {
   Award,
   Settings,
   Building2,
+  ClipboardList,
+  MessageSquareText,
   type LucideIcon,
 } from 'lucide-react';
 
 import type { UserRole } from '@/types/api';
-import { isSchoolAdmin, isStaff, isStudent, isSuperAdmin } from '@/lib/utils';
+import { isAdmin, isOrganiser, isStaff, isStudent } from '@/lib/utils';
 
 /**
  * Role-based navigation. `NavGroup[]` is the single source of truth for the
@@ -38,20 +40,26 @@ export function navFor(role: UserRole): NavGroup[] {
     items: [{ title: 'Dashboard', href: '/dashboard', icon: LayoutDashboard, highlight: true }],
   });
 
-  if (isSuperAdmin(role)) {
+  if (isAdmin(role)) {
     groups.push({
       label: 'Platform',
-      items: [{ title: 'Schools', href: '/super-admin/schools', icon: Building2 }],
+      items: [
+        { title: 'Schools', href: '/admin/schools', icon: Building2 },
+        { title: 'Divisions', href: '/admin/divisions', icon: Building2 },
+        { title: 'Public enquiries', href: '/admin/enquiries', icon: MessageSquareText },
+        { title: 'Teacher allocation', href: '/teacher-allocations', icon: ClipboardList },
+      ],
     });
   }
 
-  if (isSchoolAdmin(role)) {
+  if (isOrganiser(role)) {
     groups.push({
       label: 'Management',
       items: [
         { title: 'Classes', href: '/classes', icon: GraduationCap },
         { title: 'Students', href: '/students', icon: Users },
         { title: 'Users', href: '/users', icon: Users },
+        { title: 'Teacher allocation', href: '/teacher-allocations', icon: ClipboardList },
       ],
     });
   }
@@ -59,7 +67,12 @@ export function navFor(role: UserRole): NavGroup[] {
   if (isStaff(role)) {
     groups.push({
       label: 'Teaching',
-      items: [{ title: 'Courses', href: '/courses', icon: BookOpen }],
+      items: [
+        { title: 'Courses', href: '/courses', icon: BookOpen },
+        ...(role === 'TEACHER'
+          ? [{ title: 'My schedule', href: '/teacher-allocations', icon: ClipboardList }]
+          : []),
+      ],
     });
   }
 
@@ -83,11 +96,11 @@ export function navFor(role: UserRole): NavGroup[] {
 }
 
 const rolePrimaryDestination: Record<UserRole, string> = {
-  SUPER_ADMIN: '/super-admin/schools',
-  SCHOOL_ADMIN: '/dashboard',
+  ADMIN: '/admin/schools',
+  ORGANISER: '/dashboard',
   TEACHER: '/dashboard',
   STUDENT: '/courses',
-  PARENT: '/dashboard',
+  COORDINATOR: '/dashboard',
 };
 
 export function defaultRouteFor(role: UserRole): string {

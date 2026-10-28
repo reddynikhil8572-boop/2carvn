@@ -35,7 +35,7 @@ beforeAll(async () => {
   const passwordHash = await hashPassword(PASSWORD);
   await asSuperAdmin(async (tx) => {
     await tx.user.create({
-      data: { email: OWNER_EMAIL, passwordHash, name: 'Owner', role: 'SUPER_ADMIN' },
+      data: { email: OWNER_EMAIL, passwordHash, name: 'Owner', role: 'ADMIN' },
     });
   });
 

@@ -9,7 +9,6 @@ export const createClassSchema = z
     /// ("2026", "2026-27", "AY2026"), and the value is only ever displayed and
     /// used for uniqueness within a school.
     academicYear: z.string().trim().min(1, 'An academic year is required').max(20),
-    teacherId: z.string().uuid('Invalid teacher id').optional(),
   })
   .strict();
 

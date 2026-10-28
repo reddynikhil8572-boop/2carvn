@@ -37,6 +37,9 @@ enum SchoolPlan {
 model School {
   id String @id @default(uuid()) @db.Uuid
 
+  divisionId String?   @map("division_id") @db.Uuid
+  division   Division? @relation(fields: [divisionId], references: [id], onDelete: SetNull)
+
   /// Human-facing unique identifier shown in the UI and used at login,
   /// e.g. "SCH-001". Distinct from the surrogate primary key.
   schoolCode String @unique @map("school_code")
@@ -88,18 +91,61 @@ model School {
   videoProgress VideoProgress[]
   videoEvents   VideoEvent[]
 
+  teacherAllocations        TeacherAllocation[]
+  teacherAvailabilities     TeacherAvailability[]
+  teacherTimetableSlots     TeacherTimetableSlot[]
+  teacherAllocationRequests TeacherAllocationRequest[]
+
   @@index([isActive])
+  @@index([divisionId])
   @@map("schools")
 }
 
-/// Requirements §2 and §5. SUPER_ADMIN is the platform owner and sits outside
-/// any school; every other role belongs to exactly one.
+/// Geographic/operational group of schools. Coordinator visibility is granted
+/// through CoordinatorDivision and must be applied by scoped API services.
+model Division {
+  id        String   @id @default(uuid()) @db.Uuid
+  code      String   @unique
+  name      String
+  region    String?
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  schools      School[]
+  coordinators CoordinatorDivision[]
+
+  @@map("divisions")
+}
+
+/// Admin-managed, auditable grant from a coordinator to a division.
+model CoordinatorDivision {
+  id            String   @id @default(uuid()) @db.Uuid
+  coordinatorId String   @map("coordinator_id") @db.Uuid
+  coordinator   User     @relation("CoordinatorDivisionGrants", fields: [coordinatorId], references: [id], onDelete: Cascade)
+  divisionId    String   @map("division_id") @db.Uuid
+  division      Division @relation(fields: [divisionId], references: [id], onDelete: Cascade)
+  assignedById  String   @map("assigned_by_id") @db.Uuid
+  assignedBy    User     @relation("CoordinatorDivisionGrantActor", fields: [assignedById], references: [id], onDelete: Restrict)
+  revokedById   String?  @map("revoked_by_id") @db.Uuid
+  revokedBy     User?    @relation("CoordinatorDivisionGrantRevoker", fields: [revokedById], references: [id], onDelete: SetNull)
+  revokedAt     DateTime? @map("revoked_at")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  @@index([coordinatorId, divisionId, revokedAt])
+  @@index([divisionId, revokedAt])
+  @@index([assignedById])
+  @@index([revokedById])
+  @@map("coordinator_divisions")
+}
+
+/// The five application roles. ADMIN is platform-wide; all other roles are
+/// school-scoped, with COORDINATOR access further limited by division grants.
 enum UserRole {
-  SUPER_ADMIN
-  SCHOOL_ADMIN
+  ADMIN
+  ORGANISER
   TEACHER
   STUDENT
-  PARENT
+  COORDINATOR
 }
 
 enum UserStatus {
@@ -108,10 +154,40 @@ enum UserStatus {
   SUSPENDED
 }
 
+enum PublicEnquiryKind {
+  GENERAL
+  DEMO
+}
+
+enum PublicEnquiryStatus {
+  NEW
+  IN_PROGRESS
+  CLOSED
+}
+
+/// Public contact/demo requests. Public visitors may submit new rows only;
+/// reading and triaging enquiries is an Admin-only operation.
+model PublicEnquiry {
+  id            String              @id @default(uuid()) @db.Uuid
+  name          String
+  email         String
+  phone         String?
+  organisation  String?             @map("organisation")
+  kind          PublicEnquiryKind   @default(GENERAL)
+  message       String
+  consentAt     DateTime            @default(now()) @map("consent_at")
+  status        PublicEnquiryStatus @default(NEW)
+  submittedAt   DateTime            @default(now()) @map("submitted_at")
+  updatedAt     DateTime            @updatedAt @map("updated_at")
+
+  @@index([status, submittedAt(sort: Desc)])
+  @@map("public_enquiries")
+}
+
 model User {
   id String @id @default(uuid()) @db.Uuid
 
-  /// Null only for SUPER_ADMIN, who operates across tenants. Enforced by a
+  /// Null only for ADMIN, who operates across tenants. Enforced by a
   /// CHECK constraint in the RLS migration.
   schoolId String? @map("school_id") @db.Uuid
   school   School? @relation(fields: [schoolId], references: [id], onDelete: Cascade)
@@ -157,22 +233,30 @@ model User {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  taughtClasses      Class[]                @relation("ClassTeacher")
-  enrollments        Enrollment[]
-  childLinks         ParentLink[]           @relation("ParentToChild")
-  parentLinks        ParentLink[]           @relation("ChildToParent")
-  auditLogs          AuditLog[]
-  refreshTokens      RefreshToken[]
-  recoveryCodes      RecoveryCode[]
-  resetTokens        PasswordResetToken[]
-  createdCourses     Course[]               @relation("CourseCreator")
-  quizAttempts       QuizAttempt[]          @relation("QuizAttemptStudent")
-  submissions        AssignmentSubmission[] @relation("SubmissionStudent")
-  gradedWork         AssignmentSubmission[] @relation("SubmissionGrader")
-  certificates       Certificate[]          @relation("CertificateHolder")
-  issuedCertificates Certificate[]          @relation("CertificateIssuer")
-  videoProgress      VideoProgress[]        @relation("VideoWatcher")
-  videoEvents        VideoEvent[]           @relation("VideoEventActor")
+  taughtClasses               Class[]                    @relation("ClassTeacher")
+  enrollments                 Enrollment[]
+  childLinks                  ParentLink[]               @relation("ParentToChild")
+  parentLinks                 ParentLink[]               @relation("ChildToParent")
+  auditLogs                   AuditLog[]
+  refreshTokens               RefreshToken[]
+  recoveryCodes               RecoveryCode[]
+  resetTokens                 PasswordResetToken[]
+  createdCourses              Course[]                   @relation("CourseCreator")
+  quizAttempts                QuizAttempt[]              @relation("QuizAttemptStudent")
+  submissions                 AssignmentSubmission[]     @relation("SubmissionStudent")
+  gradedWork                  AssignmentSubmission[]     @relation("SubmissionGrader")
+  certificates                Certificate[]              @relation("CertificateHolder")
+  issuedCertificates          Certificate[]              @relation("CertificateIssuer")
+  videoProgress               VideoProgress[]            @relation("VideoWatcher")
+  videoEvents                 VideoEvent[]               @relation("VideoEventActor")
+  teacherAllocations          TeacherAllocation[]        @relation("AllocationTeacher")
+  teacherAvailabilities       TeacherAvailability[]
+  submittedAllocationRequests TeacherAllocationRequest[] @relation("AllocationRequestSubmitter")
+  reviewedAllocationRequests  TeacherAllocationRequest[] @relation("AllocationRequestReviewer")
+  teacherAllocationRequests   TeacherAllocationRequest[] @relation("AllocationRequestTeacher")
+  coordinatorDivisionGrants   CoordinatorDivision[]       @relation("CoordinatorDivisionGrants")
+  coordinatorDivisionChanges  CoordinatorDivision[]       @relation("CoordinatorDivisionGrantActor")
+  coordinatorDivisionRevokes  CoordinatorDivision[]       @relation("CoordinatorDivisionGrantRevoker")
 
   /// Email is unique *per school*, not globally: the same person may hold
   /// accounts at more than one institution, and two schools must be able to
@@ -195,8 +279,10 @@ model Class {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  enrollments       Enrollment[]
-  courseAssignments CourseAssignment[]
+  enrollments               Enrollment[]
+  courseAssignments         CourseAssignment[]
+  teacherAllocations        TeacherAllocation[]
+  teacherAllocationRequests TeacherAllocationRequest[]
 
   @@unique([schoolId, name, academicYear])
   @@index([schoolId])
@@ -220,9 +306,9 @@ model Enrollment {
   @@map("enrollments")
 }
 
-/// Requirements §5 lists Parent as a role; §2 marks it optional. The link table
-/// exists so the relationship is modelled from the start, even if the portal
-/// ships later.
+/// Preserved legacy guardian relationships. Legacy PARENT accounts are migrated
+/// to suspended COORDINATOR accounts pending manual review; this table remains
+/// for historical data and is not an authorization grant.
 model ParentLink {
   id       String @id @default(uuid()) @db.Uuid
   schoolId String @map("school_id") @db.Uuid
@@ -1007,4 +1093,126 @@ model VideoEvent {
   @@index([schoolId, occurredAt])
   @@index([lessonItemId, studentId])
   @@map("video_events")
+}
+
+enum AllocationRequestType {
+  ASSIGN
+  REPLACE
+  REASSIGN
+}
+
+enum AllocationRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+/// One teacher's responsibility for a specific subject and class section.
+/// A bounded date range supports temporary substitutions without overwriting
+/// the ongoing allocation.
+model TeacherAllocation {
+  id       String @id @default(uuid()) @db.Uuid
+  schoolId String @map("school_id") @db.Uuid
+  school   School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+
+  teacherId String @map("teacher_id") @db.Uuid
+  teacher   User   @relation("AllocationTeacher", fields: [teacherId], references: [id], onDelete: Cascade)
+  classId   String @map("class_id") @db.Uuid
+  class     Class  @relation(fields: [classId], references: [id], onDelete: Cascade)
+
+  subject         String
+  section         String
+  weeklyHours     Float               @map("weekly_hours")
+  startsAt        DateTime?           @map("starts_at") @db.Date
+  endsAt          DateTime?           @map("ends_at") @db.Date
+  substituteForId String?             @map("substitute_for_id") @db.Uuid
+  substituteFor   TeacherAllocation?  @relation("AllocationSubstitution", fields: [substituteForId], references: [id], onDelete: SetNull)
+  substitutes     TeacherAllocation[] @relation("AllocationSubstitution")
+  isActive        Boolean             @default(true) @map("is_active")
+
+  timetableSlots      TeacherTimetableSlot[]
+  approvedRequests    TeacherAllocationRequest[] @relation("ApprovedAllocation")
+  replacementRequests TeacherAllocationRequest[] @relation("RequestedReplacement")
+  createdAt           DateTime                   @default(now()) @map("created_at")
+  updatedAt           DateTime                   @updatedAt @map("updated_at")
+
+  @@index([schoolId, teacherId, isActive])
+  @@index([schoolId, classId, subject, section])
+  @@index([substituteForId])
+  @@map("teacher_allocations")
+}
+
+/// Recurring availability, with times represented as minutes after midnight.
+model TeacherAvailability {
+  id       String @id @default(uuid()) @db.Uuid
+  schoolId String @map("school_id") @db.Uuid
+  school   School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+
+  teacherId   String   @map("teacher_id") @db.Uuid
+  teacher     User     @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  weekday     Int
+  startMinute Int      @map("start_minute")
+  endMinute   Int      @map("end_minute")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@index([schoolId, teacherId, weekday])
+  @@map("teacher_availabilities")
+}
+
+/// Recurring weekly lesson period attached to a teacher allocation.
+model TeacherTimetableSlot {
+  id           String            @id @default(uuid()) @db.Uuid
+  schoolId     String            @map("school_id") @db.Uuid
+  school       School            @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  allocationId String            @map("allocation_id") @db.Uuid
+  allocation   TeacherAllocation @relation(fields: [allocationId], references: [id], onDelete: Cascade)
+
+  weekday     Int
+  startMinute Int      @map("start_minute")
+  endMinute   Int      @map("end_minute")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@index([schoolId, weekday, startMinute])
+  @@index([allocationId])
+  @@map("teacher_timetable_slots")
+}
+
+/// Requests are submitted by school administrators and decided by the
+/// platform administrator. Only approved requests create active allocations.
+model TeacherAllocationRequest {
+  id       String @id @default(uuid()) @db.Uuid
+  schoolId String @map("school_id") @db.Uuid
+  school   School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+
+  requesterId String  @map("requester_id") @db.Uuid
+  requester   User    @relation("AllocationRequestSubmitter", fields: [requesterId], references: [id], onDelete: Cascade)
+  reviewerId  String? @map("reviewer_id") @db.Uuid
+  reviewer    User?   @relation("AllocationRequestReviewer", fields: [reviewerId], references: [id], onDelete: SetNull)
+
+  type               AllocationRequestType
+  status             AllocationRequestStatus @default(PENDING)
+  teacherId          String                  @map("teacher_id") @db.Uuid
+  teacher            User                    @relation("AllocationRequestTeacher", fields: [teacherId], references: [id], onDelete: Cascade)
+  classId            String                  @map("class_id") @db.Uuid
+  class              Class                   @relation(fields: [classId], references: [id], onDelete: Cascade)
+  subject            String
+  section            String
+  weeklyHours        Float                   @map("weekly_hours")
+  startsAt           DateTime?               @map("starts_at") @db.Date
+  endsAt             DateTime?               @map("ends_at") @db.Date
+  note               String?
+  decisionNote       String?                 @map("decision_note")
+  allocationId       String?                 @map("allocation_id") @db.Uuid
+  allocation         TeacherAllocation?      @relation("ApprovedAllocation", fields: [allocationId], references: [id], onDelete: SetNull)
+  targetAllocationId String?                 @map("target_allocation_id") @db.Uuid
+  targetAllocation   TeacherAllocation?      @relation("RequestedReplacement", fields: [targetAllocationId], references: [id], onDelete: SetNull)
+  decidedAt          DateTime?               @map("decided_at")
+  createdAt          DateTime                @default(now()) @map("created_at")
+  updatedAt          DateTime                @updatedAt @map("updated_at")
+
+  @@index([schoolId, status, createdAt])
+  @@index([requesterId])
+  @@map("teacher_allocation_requests")
 }

@@ -42,7 +42,7 @@ export type LoginResult =
  * returns only these columns and nothing else. See migration
  * 20260802154500_login_lookup.
  *
- * `schoolCode` is empty for SUPER_ADMIN, who has no school.
+ * `schoolCode` is empty for ADMIN, who has no school.
  */
 export const authenticate = async (
   schoolCode: string,

@@ -1,3 +1,4 @@
+import type { Prisma } from '@prisma/client';
 import type { TenantClient } from '../db/tenantContext';
 import type { TokenPayload } from '../utils/jwt';
 
@@ -18,9 +19,36 @@ import type { TokenPayload } from '../utils/jwt';
 const forbidden = (message: string) => Object.assign(new Error(message), { statusCode: 403 });
 const notFound = (message: string) => Object.assign(new Error(message), { statusCode: 404 });
 
+const utcToday = (): Date => {
+  const today = new Date();
+  today.setUTCHours(0, 0, 0, 0);
+  return today;
+};
+
+export const teacherClassAccessFilter = (user: TokenPayload): Prisma.ClassWhereInput => {
+  const today = utcToday();
+  return {
+    OR: [
+      { teacherId: user.userId },
+      {
+        teacherAllocations: {
+          some: {
+            teacherId: user.userId,
+            isActive: true,
+            AND: [
+              { OR: [{ startsAt: null }, { startsAt: { lte: today } }] },
+              { OR: [{ endsAt: null }, { endsAt: { gte: today } }] },
+            ],
+          },
+        },
+      },
+    ],
+  };
+};
+
 /** Roles permitted to author content at all. */
 export const isStaff = (role: TokenPayload['role']): boolean =>
-  role === 'SCHOOL_ADMIN' || role === 'TEACHER';
+  role === 'ORGANISER' || role === 'TEACHER';
 
 /**
  * The `where` fragment that decides which courses a caller may READ.
@@ -28,14 +56,28 @@ export const isStaff = (role: TokenPayload['role']): boolean =>
  * - Students see only PUBLISHED courses attached to a class they are enrolled
  *   in. Publishing alone is not enough: a course published for year 9 must not
  *   appear for year 7.
- * - Staff see everything in their school, drafts included, because they build
- *   it.
+ * - School admins see the whole catalogue. Teachers see courses they authored
+ *   or courses assigned to a class they currently teach.
  *
  * Returned as a fragment rather than applied here so list and detail reads
  * cannot drift apart.
  */
 export const courseReadFilter = (user: TokenPayload): Record<string, unknown> => {
-  if (isStaff(user.role)) return {};
+  if (user.role === 'ORGANISER') return {};
+
+  if (user.role === 'TEACHER') {
+    return {
+      OR: [
+        { createdBy: user.userId, assignments: { none: {} } },
+        {
+          assignments: {
+            some: { class: teacherClassAccessFilter(user) },
+            every: { class: teacherClassAccessFilter(user) },
+          },
+        },
+      ],
+    };
+  }
 
   return {
     status: 'PUBLISHED',
@@ -83,15 +125,26 @@ export const findEditableCourse = async (
   const course = await tx.course.findFirst({ where: { id: courseId } });
   if (!course) throw notFound('Course not found');
 
-  if (user.role === 'SCHOOL_ADMIN') return course;
-
-  if (course.createdBy === user.userId) return course;
+  if (user.role === 'ORGANISER') return course;
 
   const teaches = await tx.courseAssignment.findFirst({
-    where: { courseId, class: { teacherId: user.userId } },
+    where: {
+      courseId,
+      class: teacherClassAccessFilter(user),
+    },
     select: { id: true },
   });
-  if (teaches) return course;
+  const assignedToOtherClass = await tx.courseAssignment.findFirst({
+    where: {
+      courseId,
+      NOT: { class: teacherClassAccessFilter(user) },
+    },
+    select: { id: true },
+  });
+  if (
+    !assignedToOtherClass &&
+    (course.createdBy === user.userId || teaches)
+  ) return course;
 
   throw forbidden('You may only edit courses you created or teach');
 };

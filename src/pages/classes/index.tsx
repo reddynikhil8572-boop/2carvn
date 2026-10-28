@@ -8,8 +8,7 @@ import { toast } from 'sonner';
 
 import { useAuthUser } from '@/stores/auth';
 import { useClasses, useCreateClass } from '@/hooks/useClasses';
-import { useUsers } from '@/hooks/useUsers';
-import { isSchoolAdmin } from '@/lib/utils';
+import { isOrganiser } from '@/lib/utils';
 import { PageHeader } from '@/components/page-header';
 import { EmptyState } from '@/components/empty-state';
 import { ErrorState } from '@/components/error-state';
@@ -35,25 +34,16 @@ import {
 import {
   Form,
   FormControl,
-  FormDescription,
   FormField,
   FormItem,
   FormLabel,
   FormMessage,
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 
 const createSchema = z.object({
   name: z.string().trim().min(1, 'Name is required').max(200),
   academicYear: z.string().trim().min(1, 'Academic year is required').max(9),
-  teacherId: z.union([z.string().uuid('Select a valid teacher'), z.literal('')]),
 });
 
 type CreateValues = z.infer<typeof createSchema>;
@@ -61,27 +51,23 @@ type CreateValues = z.infer<typeof createSchema>;
 export function ClassesPage() {
   const user = useAuthUser();
   const navigate = useNavigate();
-  const isAdmin = user ? isSchoolAdmin(user.role) : false;
+  const isAdmin = user ? isOrganiser(user.role) : false;
 
   const { data: classes = [], isLoading, error, refetch } = useClasses();
-  const { data: users = [] } = useUsers();
   const createClass = useCreateClass();
 
   const [createOpen, setCreateOpen] = useState(false);
 
   const createForm = useForm<CreateValues>({
     resolver: zodResolver(createSchema),
-    defaultValues: { name: '', academicYear: '', teacherId: '' },
+    defaultValues: { name: '', academicYear: '' },
   });
-
-  const teachers = users.filter((u) => u.role === 'TEACHER');
 
   async function handleCreate(values: CreateValues) {
     try {
       await createClass.mutateAsync({
         name: values.name,
         academicYear: values.academicYear,
-        ...(values.teacherId ? { teacherId: values.teacherId } : {}),
       });
       toast.success('Class created');
       setCreateOpen(false);
@@ -169,7 +155,7 @@ export function ClassesPage() {
           <DialogHeader>
             <DialogTitle>New class</DialogTitle>
             <DialogDescription>
-              Give the class a name and academic year. You can assign a teacher at any time.
+              Give the class a name and academic year. Teacher assignments are managed in Teacher allocation.
             </DialogDescription>
           </DialogHeader>
           <Form {...createForm}>
@@ -196,37 +182,6 @@ export function ClassesPage() {
                     <FormControl>
                       <Input placeholder="e.g. 2025–2026" {...field} />
                     </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={createForm.control}
-                name="teacherId"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Teacher</FormLabel>
-                    <FormControl>
-                      <Select value={field.value} onValueChange={field.onChange}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="No teacher assigned" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {teachers.length > 0 ? (
-                            teachers.map((teacher) => (
-                              <SelectItem key={teacher.id} value={teacher.id}>
-                                {teacher.name}
-                              </SelectItem>
-                            ))
-                          ) : (
-                            <SelectItem value="~" disabled>
-                              No teachers available
-                            </SelectItem>
-                          )}
-                        </SelectContent>
-                      </Select>
-                    </FormControl>
-                    <FormDescription>Optional. Assign a teacher to this class.</FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}

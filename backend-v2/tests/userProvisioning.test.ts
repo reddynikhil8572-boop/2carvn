@@ -48,7 +48,7 @@ beforeAll(async () => {
         email: OWNER,
         passwordHash: await hashPassword(PASSWORD),
         name: 'Owner',
-        role: 'SUPER_ADMIN',
+        role: 'ADMIN',
       },
     });
   });

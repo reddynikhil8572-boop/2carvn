@@ -1,7 +1,10 @@
 import { Router } from 'express';
+import publicRoutes from './public.routes';
 import authRoutes from './auth.routes';
 import superAdminRoutes from './superAdmin.routes';
 import schoolAdminRoutes from './schoolAdmin.routes';
+import teacherAllocationRoutes from './teacherAllocation.routes';
+import coordinatorRoutes from './coordinator.routes';
 import classRoutes from './class.routes';
 import courseRoutes, {
   attemptRouter,
@@ -27,8 +30,13 @@ router.get('/', (_req, res) => {
 });
 
 router.use('/auth', authRoutes);
+router.use('/public', publicRoutes);
+router.use('/admin', superAdminRoutes);
+router.use('/organiser', schoolAdminRoutes);
 router.use('/super-admin', superAdminRoutes);
 router.use('/school-admin', schoolAdminRoutes);
+router.use('/teacher-allocations', teacherAllocationRoutes);
+router.use('/coordinator', coordinatorRoutes);
 // §6 course hierarchy. Levels below Course are addressed by their own ids
 // rather than nested under /courses/:id, each on its own prefix — mounting a
 // router carrying auth middleware at '/' would apply it to unmatched paths and

@@ -84,8 +84,8 @@ export const createUserSchema = z
      */
     password: passwordSchema.optional(),
     name: z.string().trim().min(2).max(120),
-    // A school admin may create staff and learners, never another super admin.
-    role: z.enum(['SCHOOL_ADMIN', 'TEACHER', 'STUDENT', 'PARENT']),
+    // Organisers can provision teachers and learners, but not platform roles.
+    role: z.enum(['TEACHER', 'STUDENT']),
   })
   .strict();
 

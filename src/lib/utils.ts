@@ -9,25 +9,25 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 /** Guard helpers — used in route guards and conditional UI. */
-export const isSuperAdmin = (role: UserRole) => role === 'SUPER_ADMIN';
-export const isSchoolAdmin = (role: UserRole) => role === 'SCHOOL_ADMIN';
+export const isAdmin = (role: UserRole) => role === 'ADMIN';
+export const isOrganiser = (role: UserRole) => role === 'ORGANISER';
 export const isTeacher = (role: UserRole) => role === 'TEACHER';
 export const isStudent = (role: UserRole) => role === 'STUDENT';
 export const isStaff = (role: UserRole) =>
-  role === 'SCHOOL_ADMIN' || role === 'TEACHER';
+  role === 'ORGANISER' || role === 'TEACHER';
 
 /** Short plural label for a role. */
 export const roleLabel = (role: UserRole): string => {
   switch (role) {
-    case 'SUPER_ADMIN':
-      return 'Super Admin';
-    case 'SCHOOL_ADMIN':
-      return 'School Admin';
+    case 'ADMIN':
+      return 'Admin';
+    case 'ORGANISER':
+      return 'Organiser';
     case 'TEACHER':
       return 'Teacher';
     case 'STUDENT':
       return 'Student';
-    case 'PARENT':
-      return 'Parent';
+    case 'COORDINATOR':
+      return 'Coordinator';
   }
 };

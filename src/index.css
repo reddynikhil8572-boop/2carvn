@@ -10,7 +10,7 @@
      hook, never as raw dynamic CSS strings anywhere else. */
 
   :root {
-    --background: 0 0% 100%;
+    --background: 210 20% 98%;
     --foreground: 222 47% 11%;
 
     --card: 0 0% 100%;
@@ -19,8 +19,8 @@
     --popover: 0 0% 100%;
     --popover-foreground: 222 47% 11%;
 
-    --primary: 221 83% 53%;
-    --primary-foreground: 210 40% 98%;
+    --primary: 28.71 100% 50%;
+    --primary-foreground: 222 47% 11%;
 
     --secondary: 210 40% 96.1%;
     --secondary-foreground: 222 47% 11%;
@@ -42,7 +42,7 @@
 
     --border: 214 32% 91%;
     --input: 214 32% 91%;
-    --ring: 221 83% 53%;
+    --ring: 28.71 100% 50%;
 
     --sidebar: 210 40% 98%;
     --sidebar-foreground: 222 47% 11%;
@@ -60,7 +60,7 @@
     --popover: 222 44% 8%;
     --popover-foreground: 210 40% 98%;
 
-    --primary: 217 91% 60%;
+    --primary: 28.71 100% 54%;
     --primary-foreground: 222 47% 6%;
 
     --secondary: 217 33% 16%;
@@ -83,10 +83,91 @@
 
     --border: 217 33% 17%;
     --input: 217 33% 20%;
-    --ring: 217 91% 60%;
+    --ring: 28.71 100% 54%;
 
     --sidebar: 222 47% 8%;
     --sidebar-foreground: 210 40% 98%;
+  }
+
+  :root[data-student-theme='classic'] {
+    --primary: 28.71 100% 50%;
+    --primary-foreground: 222 47% 11%;
+    --ring: 28.71 100% 50%;
+  }
+
+  :root[data-student-theme='cartoon'] {
+    --background: 190 70% 96%;
+    --foreground: 205 45% 17%;
+    --card: 0 0% 100%;
+    --card-foreground: 205 45% 17%;
+    --primary: 336 82% 52%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 172 56% 88%;
+    --secondary-foreground: 205 45% 17%;
+    --muted: 185 40% 91%;
+    --muted-foreground: 205 22% 37%;
+    --accent: 44 100% 83%;
+    --accent-foreground: 205 45% 17%;
+    --border: 190 45% 82%;
+    --input: 190 45% 82%;
+    --ring: 336 82% 52%;
+    --sidebar: 186 58% 92%;
+    --sidebar-foreground: 205 45% 17%;
+    --radius: 1rem;
+  }
+
+  :root[data-student-theme='anime'] {
+    --background: 262 65% 97%;
+    --foreground: 250 35% 18%;
+    --card: 0 0% 100%;
+    --card-foreground: 250 35% 18%;
+    --primary: 267 72% 54%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 326 74% 92%;
+    --secondary-foreground: 250 35% 18%;
+    --muted: 259 36% 93%;
+    --muted-foreground: 250 20% 39%;
+    --accent: 190 76% 88%;
+    --accent-foreground: 250 35% 18%;
+    --border: 260 40% 86%;
+    --input: 260 40% 86%;
+    --ring: 267 72% 54%;
+    --sidebar: 260 50% 94%;
+    --sidebar-foreground: 250 35% 18%;
+    --radius: 0.9rem;
+  }
+
+  :root[data-student-theme='racing'] {
+    color-scheme: dark;
+    --background: 220 23% 10%;
+    --foreground: 210 30% 95%;
+    --card: 220 21% 14%;
+    --card-foreground: 210 30% 95%;
+    --popover: 220 21% 14%;
+    --popover-foreground: 210 30% 95%;
+    --primary: 25 100% 52%;
+    --primary-foreground: 220 23% 10%;
+    --secondary: 218 18% 22%;
+    --secondary-foreground: 210 30% 95%;
+    --muted: 218 18% 22%;
+    --muted-foreground: 214 14% 70%;
+    --accent: 354 70% 35%;
+    --accent-foreground: 210 30% 95%;
+    --border: 218 16% 27%;
+    --input: 218 16% 27%;
+    --ring: 25 100% 52%;
+    --sidebar: 221 24% 12%;
+    --sidebar-foreground: 210 30% 95%;
+    --radius: 0.35rem;
+  }
+
+  :root[data-motion-level='minimal'] *,
+  :root[data-motion-level='minimal'] *::before,
+  :root[data-motion-level='minimal'] *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
 }
 
@@ -98,6 +179,24 @@
     @apply bg-background text-foreground antialiased;
     font-feature-settings: 'rlig' 1, 'calt' 1;
   }
+  :root[data-student-theme='cartoon'] body {
+    background-image:
+      radial-gradient(circle at 8% 12%, hsl(44 100% 83% / 0.34), transparent 24rem),
+      radial-gradient(circle at 90% 80%, hsl(172 56% 88% / 0.45), transparent 28rem);
+    background-attachment: fixed;
+  }
+  :root[data-student-theme='anime'] body {
+    background-image:
+      linear-gradient(135deg, hsl(326 74% 92% / 0.32), transparent 38%),
+      radial-gradient(circle at 92% 8%, hsl(190 76% 88% / 0.5), transparent 24rem);
+    background-attachment: fixed;
+  }
+  :root[data-student-theme='racing'] body {
+    background-image:
+      repeating-linear-gradient(135deg, transparent 0 42px, hsl(25 100% 52% / 0.025) 42px 44px),
+      radial-gradient(circle at 85% 0%, hsl(354 70% 35% / 0.25), transparent 24rem);
+    background-attachment: fixed;
+  }
   ::selection {
     background-color: hsl(var(--primary) / 0.2);
   }
@@ -107,6 +206,44 @@
 @layer utilities {
   .focus-ring {
     @apply outline-none ring-2 ring-ring ring-offset-2 ring-offset-background;
+  }
+
+  /* Smooth underline slide-in for nav links */
+  .nav-underline {
+    position: relative;
+  }
+  .nav-underline::after {
+    content: '';
+    position: absolute;
+    bottom: -2px;
+    left: 0;
+    width: 0;
+    height: 2px;
+    background-color: hsl(var(--primary));
+    border-radius: 9999px;
+    transition: width 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .nav-underline:hover::after,
+  .nav-underline:focus-visible::after {
+    width: 100%;
+  }
+
+  /* Soft pulse for badges / live indicators */
+  @keyframes soft-pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.55; }
+  }
+  .animate-soft-pulse {
+    animation: soft-pulse 2s ease-in-out infinite;
+  }
+
+  /* Float: used for decorative orbs in brand panels */
+  @keyframes float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-10px); }
+  }
+  .animate-float {
+    animation: float 5s ease-in-out infinite;
   }
 }
 

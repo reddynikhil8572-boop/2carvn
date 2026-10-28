@@ -56,7 +56,7 @@ const router = Router();
  * of being turned into a 401 by the auth guard.
  */
 const tenant = () => [requireAuth, requireTenant] as const;
-const staffOnly = requireRole(['SCHOOL_ADMIN', 'TEACHER']);
+const staffOnly = requireRole(['ORGANISER', 'TEACHER']);
 
 // ── Read ───────────────────────────────────────────────────────────────────
 router.get('/', ...tenant(), ctrl.listCourses);

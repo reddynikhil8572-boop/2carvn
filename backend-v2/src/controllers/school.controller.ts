@@ -68,7 +68,7 @@ export const createSchool = async (
           email: input.admin.email,
           passwordHash,
           name: input.admin.name,
-          role: 'SCHOOL_ADMIN',
+          role: 'ORGANISER',
         },
         select: { id: true, email: true, name: true, role: true },
       });

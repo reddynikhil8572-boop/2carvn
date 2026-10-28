@@ -30,7 +30,7 @@ beforeAll(async () => {
 
   await asSuperAdmin(async (tx) => {
     await tx.user.create({
-      data: { email: OWNER_EMAIL, passwordHash, name: 'Platform Owner', role: 'SUPER_ADMIN' },
+      data: { email: OWNER_EMAIL, passwordHash, name: 'Platform Owner', role: 'ADMIN' },
     });
   });
 });
@@ -50,7 +50,7 @@ describe('school provisioning', () => {
       .send({ email: OWNER_EMAIL, password: PASSWORD });
 
     expect(res.status).toBe(200);
-    expect(res.body.data.user.role).toBe('SUPER_ADMIN');
+    expect(res.body.data.user.role).toBe('ADMIN');
     expect(res.body.data.user.schoolId).toBeNull();
   });
 
@@ -66,7 +66,7 @@ describe('school provisioning', () => {
     });
     expect(a.status, a.text).toBe(201);
     expect(a.body.data.studentCap).toBe(2000); // §16 cap derived from the plan
-    expect(a.body.data.admin.role).toBe('SCHOOL_ADMIN');
+    expect(a.body.data.admin.role).toBe('ORGANISER');
     expect(a.body.data.adminMustResetPassword).toBe(false);
 
     const b = await owner.post('/api/v1/super-admin/schools').send({
@@ -103,7 +103,7 @@ describe('school provisioning', () => {
       .send({ schoolCode: 'API-C', email: 'head@gamma.test', password: PASSWORD });
 
     expect(login.status).toBe(200);
-    expect(login.body.data.user.role).toBe('SCHOOL_ADMIN');
+    expect(login.body.data.user.role).toBe('ORGANISER');
   });
 
   it('leaves no school behind when the admin cannot be created', async () => {
@@ -249,7 +249,7 @@ describe('authorization', () => {
     const adminA = await signIn('API-A', 'admin@alpha.test');
     const res = await adminA
       .post('/api/v1/school-admin/users')
-      .send({ email: 'sneaky@api.test', password: PASSWORD, name: 'Sneaky', role: 'SUPER_ADMIN' });
+      .send({ email: 'sneaky@api.test', password: PASSWORD, name: 'Sneaky', role: 'ADMIN' });
 
     expect(res.status).toBe(422);
   });

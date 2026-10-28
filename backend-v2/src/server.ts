@@ -1,4 +1,3 @@
-import app from './app';
 import { config } from './config/env';
 import { connectDB, disconnectDB } from './db/prisma';
 import { connectRedis, disconnectRedis } from './db/redis';
@@ -13,6 +12,10 @@ const startServer = async () => {
   // Before listen: rate-limit counters live here, and a request arriving
   // before the client is up would be rejected by the store.
   await connectRedis();
+
+  // Rate-limit stores initialize while the app module is evaluated, so Redis
+  // must be connected before loading the Express app.
+  const { default: app } = await import('./app');
 
   const server = app.listen(config.port, () => {
     logger.info(`2carvn API running in ${config.nodeEnv} mode on port ${config.port}`);

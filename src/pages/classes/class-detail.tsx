@@ -7,7 +7,7 @@ import { toast } from 'sonner';
 import { useAuthUser } from '@/stores/auth';
 import { useClasses, useEnrolStudent, useEnrollments } from '@/hooks/useClasses';
 import { useUsers } from '@/hooks/useUsers';
-import { isSchoolAdmin } from '@/lib/utils';
+import { isOrganiser } from '@/lib/utils';
 import { PageHeader } from '@/components/page-header';
 import { EmptyState } from '@/components/empty-state';
 import { ErrorState } from '@/components/error-state';
@@ -47,7 +47,7 @@ import {
 export function ClassDetailPage() {
   const { id } = useParams<'id'>();
   const user = useAuthUser();
-  const isAdmin = user ? isSchoolAdmin(user.role) : false;
+  const isAdmin = user ? isOrganiser(user.role) : false;
 
   const [enrolOpen, setEnrolOpen] = useState(false);
   const [selectedStudentId, setSelectedStudentId] = useState('');

@@ -54,7 +54,7 @@ export const withTenant = async <T>(
  * Run `fn` with RLS bypassed, for platform-owner operations that legitimately
  * span tenants — creating a school, listing all schools.
  *
- * Call sites must be gated by requireRole(['SUPER_ADMIN']). Reach for
+ * Call sites must be gated by requireRole(['ADMIN']). Reach for
  * withTenant() unless the operation genuinely cannot be scoped to one school.
  */
 export const asSuperAdmin = async <T>(fn: (tx: TenantClient) => Promise<T>): Promise<T> =>

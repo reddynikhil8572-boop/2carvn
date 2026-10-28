@@ -3,28 +3,28 @@ import { api } from './client';
 import type { UserSummary, CreateUserResponse, UserExport, ErasureReport } from '@/types/models';
 import type { UserRole, ApiEnvelope } from '@/types/api';
 
-/** School-admin user management — wraps backend-v2/src/routes/schoolAdmin.routes.ts. */
+/** Organiser user management — wraps the school-scoped administration API. */
 
 export interface CreateUserPayload {
   email: string;
   name: string;
-  /** SUPER_ADMIN is rejected by the backend validator — never creatable here. */
-  role: Exclude<UserRole, 'SUPER_ADMIN'>;
+  /** Organisers provision only teachers and students. */
+  role: Extract<UserRole, 'TEACHER' | 'STUDENT'>;
   password?: string;
 }
 
 export async function createUser(payload: CreateUserPayload): Promise<CreateUserResponse> {
-  const res = await api.post<ApiEnvelope<CreateUserResponse>>('/school-admin/users', payload);
+  const res = await api.post<ApiEnvelope<CreateUserResponse>>('/organiser/users', payload);
   return res.data.data;
 }
 
 export async function listUsers(): Promise<UserSummary[]> {
-  const res = await api.get<ApiEnvelope<UserSummary[]>>('/school-admin/users');
+  const res = await api.get<ApiEnvelope<UserSummary[]>>('/organiser/users');
   return res.data.data;
 }
 
 export async function exportUserData(userId: string): Promise<UserExport> {
-  const res = await api.get<ApiEnvelope<UserExport>>(`/school-admin/users/${userId}/export`);
+  const res = await api.get<ApiEnvelope<UserExport>>(`/organiser/users/${userId}/export`);
   return res.data.data;
 }
 
@@ -48,7 +48,7 @@ export async function eraseUserData(
   params.set('revokeCertificates', String(payload.revokeCertificates));
   if (payload.reason) params.set('reason', payload.reason);
   const res = await api.delete<ApiEnvelope<ErasureReport>>(
-    `/school-admin/users/${userId}?${params.toString()}`,
+    `/organiser/users/${userId}?${params.toString()}`,
   );
   return res.data.data;
 }

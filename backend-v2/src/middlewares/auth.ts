@@ -60,9 +60,9 @@ export const requireRole =
  * enforced by Row-Level Security in the database; if this middleware were
  * removed, queries would return nothing rather than another school's data.
  *
- * SUPER_ADMIN is rejected here by design: the platform owner has no school, so
+ * ADMIN is rejected here by design: the platform owner has no school, so
  * a tenant-scoped route is meaningless for them. Cross-tenant routes use
- * requireRole(['SUPER_ADMIN']) with asSuperAdmin() instead.
+ * requireRole(['ADMIN']) with asSuperAdmin() instead.
  */
 export const requireTenant = (req: Request, res: Response, next: NextFunction) => {
   if (!req.user) {

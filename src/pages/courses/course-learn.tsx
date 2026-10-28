@@ -35,6 +35,8 @@ import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { QuizCountdown } from '@/components/quiz-countdown';
 import { cn } from '@/lib/utils';
+import { useTheme } from '@/components/theme/theme-provider';
+import { playSuccessCue } from '@/lib/sound';
 import type { LessonItemView, QuizAttempt } from '@/types/models';
 
 type ItemKind = LessonItemView['kind'];
@@ -166,6 +168,8 @@ function VideoPlayer({ itemId }: { itemId: string }) {
 // ── Quiz player ─────────────────────────────────────────────────────────────
 
 function QuizPlayer({ itemId, onComplete }: { itemId: string; onComplete?: (passed: boolean) => void }) {
+  const { soundEnabled, soundVolume } = useTheme();
+  const user = useAuthUser();
   const { data: quiz, isLoading } = useQuiz(itemId);
   const startAttempt = useStartAttempt(itemId);
 
@@ -197,6 +201,9 @@ function QuizPlayer({ itemId, onComplete }: { itemId: string; onComplete?: (pass
       const updated = await quizzesApi.submitAttempt(attempt.id, { answers });
       setResult(updated);
       setAttempt(null);
+      if (updated.passed && user?.role === 'STUDENT' && soundEnabled) {
+        playSuccessCue(soundVolume);
+      }
       onComplete?.(updated.passed === true);
     } catch {
       setSubmitting(false);

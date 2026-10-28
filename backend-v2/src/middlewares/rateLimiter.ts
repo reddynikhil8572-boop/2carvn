@@ -138,6 +138,18 @@ export const passwordResetLimiter = inProduction(
   })
 );
 
+export const publicEnquiryLimiter = inProduction(
+  rateLimit({
+    windowMs: 60 * 60 * 1000,
+    limit: 5,
+    standardHeaders: true,
+    legacyHeaders: false,
+    store: makeStore('rl:public-enquiry:'),
+    keyGenerator: (req: Request) => ipKeyGenerator(req.ip ?? ''),
+    message: errorResponse('Too many enquiries from this connection. Please try again later.'),
+  })
+);
+
 /**
  * Global limiter. Per-IP too, so it must accommodate a shared school address —
  * a blunt abuse stop, not a fairness mechanism.

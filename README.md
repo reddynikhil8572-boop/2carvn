@@ -122,9 +122,49 @@ Orchestration lives in [`src/api/upload.ts`](src/api/upload.ts); the reusable bi
   whether or not the client submits. [`QuizCountdown`](src/components/quiz-countdown.tsx) reflects
   the attempt's own `expiresAt` and blocks submission at zero.
 
+## Teacher allocation
+
+`ADMIN` is the only role that can directly create, replace, deactivate, or
+schedule teacher allocations. `ORGANISER` can view their own school’s allocations and submit
+assignment/replacement/reassignment requests; a platform administrator’s approval is required
+before a request changes access. Teachers can view their current and upcoming assignments, class
+students, timetable periods, and manage their own weekly availability.
+
+The backend enforces these rules and scopes allocation data with PostgreSQL row-level security.
+Teacher class, enrollment, course, and certificate access is limited to classes currently assigned
+to them. Timetable writes reject teacher/class-section overlaps and windows outside configured
+availability. Workload, unassigned-class, and unstaffed-subject warnings appear in the allocation
+workspace. Assignment changes, request decisions, availability edits, and timetable changes are
+recorded in the append-only audit log.
+
+API entry points are `GET/POST /admin/teacher-allocations`,
+`GET /organiser/teacher-allocations`, `POST /organiser/teacher-allocation-requests`,
+`POST /admin/teacher-allocation-requests/:id/decision`, and
+`GET/PUT /teacher-allocations/me`. The migration imports existing `classes.teacher_id` links as
+legacy "Unspecified" allocations so existing teacher access is retained.
+
+## Roles and division scope
+
+The application roles are `ADMIN`, `ORGANISER`, `TEACHER`, `STUDENT`, and `COORDINATOR`.
+Legacy `PARENT` accounts are migrated to suspended `COORDINATOR` accounts and their refresh
+sessions are revoked; they receive no division grants and must be reviewed before activation.
+Admins can create divisions and coordinator accounts, assign schools to divisions, and grant or
+revoke coordinator access. Revocations are retained as history. Coordinator summaries are
+restricted server-side to schools in active division grants and contain student/class counts but
+no financial amounts. Legacy `/super-admin` and `/school-admin` API prefixes remain as compatible
+aliases; the frontend uses `/admin` and `/organiser`.
+
+Coordinators can view their granted divisions at `GET /coordinator/divisions`. Public pages are
+available at `/`, `/about`, `/catalog`, `/programmes`, and `/contact`; the catalogue exposes
+published courses only. Contact/demo requests are submitted to `POST /public/enquiries`, are
+rate-limited and stored for Admin triage at `GET/PATCH /admin/enquiries`. Student learning
+preferences include four student-only themes, motion levels, and optional short sound feedback;
+sound is off by default and preferences are stored locally on the device.
+
 ## Routing & performance
 
 - Routes are `React.lazy`, so each page loads on demand.
 - `vite.config.ts` splits vendor code into cached chunks (`vendor-react`, `vendor-ui`, …); the
   largest baseline chunk stays under 220 kB.
-- `MotionConfig reducedMotion="user"` respects the OS reduced-motion preference."# 2carvn" 
+- Motion preferences respect the OS reduced-motion setting; the student settings page can further
+  reduce animation.

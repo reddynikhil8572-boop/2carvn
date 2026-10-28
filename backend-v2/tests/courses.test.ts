@@ -67,7 +67,7 @@ const seedSchool = async (code: string, name: string) => {
         email: `admin@${code.toLowerCase()}.test`,
         passwordHash,
         name: 'Admin',
-        role: 'SCHOOL_ADMIN',
+        role: 'ORGANISER',
       },
     });
 
@@ -110,7 +110,7 @@ beforeAll(async () => {
         email: OWNER_EMAIL,
         passwordHash: '',
         name: 'Owner',
-        role: 'SUPER_ADMIN',
+        role: 'ADMIN',
       },
     })
   );

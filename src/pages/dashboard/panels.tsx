@@ -10,6 +10,7 @@ import {
   Users,
 } from 'lucide-react';
 
+import { useCoordinatorWorkspace } from '@/hooks/useCoordinator';
 import { useCourses } from '@/hooks/useCourses';
 import { useClasses } from '@/hooks/useClasses';
 import { useSchools } from '@/hooks/useSchools';
@@ -31,15 +32,33 @@ const statusTone: Record<CourseStatus, 'secondary' | 'success' | 'warning'> = {
   ARCHIVED: 'warning',
 };
 
+/** Stagger container — children animate in sequence */
+const staggerContainer = {
+  hidden: {},
+  visible: { transition: { staggerChildren: 0.07 } },
+};
+
+const fadeSlideUp = {
+  hidden: { opacity: 0, y: 14, scale: 0.97 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    scale: 1,
+    transition: { duration: 0.35, ease: [0.22, 1, 0.36, 1] as [number, number, number, number] },
+  },
+};
+
 function CourseCard({ course, delay = 0 }: { course: CourseSummary; delay?: number }) {
   return (
     <motion.div
-      initial={{ opacity: 0, y: 8 }}
+      initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.25, delay }}
+      transition={{ duration: 0.3, delay }}
+      whileHover={{ y: -5, scale: 1.02, transition: { duration: 0.2, ease: 'easeOut' } }}
+      whileTap={{ scale: 0.98 }}
     >
       <Link to={`/courses/${course.id}`} className="block group">
-        <Card className="h-full transition-shadow hover:shadow-md">
+        <Card className="h-full transition-shadow hover:shadow-lg hover:border-primary/20">
           <CardContent className="flex h-full flex-col gap-3 p-5">
             <div className="flex items-start justify-between gap-3">
               <Badge variant={statusTone[course.status]}>{course.status}</Badge>
@@ -48,7 +67,7 @@ function CourseCard({ course, delay = 0 }: { course: CourseSummary; delay?: numb
               </span>
             </div>
             <div className="min-w-0">
-              <h3 className="font-semibold leading-snug group-hover:text-primary">
+              <h3 className="font-semibold leading-snug transition-colors group-hover:text-primary">
                 {course.title}
               </h3>
               {course.subject ? (
@@ -65,9 +84,9 @@ function CourseCard({ course, delay = 0 }: { course: CourseSummary; delay?: numb
   );
 }
 
-// ── SUPER_ADMIN ─────────────────────────────────────────────────────────────
+// ── ADMIN ────────────────────────────────────────────────────────────────────
 
-export function SuperAdminPanel() {
+export function AdminPanel() {
   const { data: schools = [], isLoading, error, refetch } = useSchools();
 
   const active = schools.filter((s) => s.isActive).length;
@@ -82,11 +101,16 @@ export function SuperAdminPanel() {
         title="Platform overview"
         description="All schools on the 2carvn platform."
       />
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <motion.div
+        className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3"
+        variants={staggerContainer}
+        initial="hidden"
+        animate="visible"
+      >
         <StatCard icon={Building2} label="Total schools" value={isLoading || error ? '…' : schools.length} hint={`${active} active`} delay={0} />
         <StatCard icon={Users} label="User seats sold" value={isLoading || error ? '…' : totalStudents} hint="across all tenants" delay={0.05} />
         <StatCard icon={Award} label="Plans in use" value={isLoading || error ? '…' : distinctPlans} hint="BASIC → ENTERPRISE" delay={0.1} />
-      </div>
+      </motion.div>
 
       {isLoading ? (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -102,15 +126,27 @@ export function SuperAdminPanel() {
             <CardTitle className="text-base">Schools</CardTitle>
           </CardHeader>
           <CardContent className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-            {schools.map((s) => (
-              <div key={s.id} className="flex items-center justify-between gap-2 rounded-lg border p-3">
-                <div className="min-w-0">
-                  <p className="truncate font-medium">{s.name}</p>
-                  <p className="text-xs text-muted-foreground">{s.schoolCode} · {s.plan}</p>
-                </div>
-                <Badge variant={s.isActive ? 'success' : 'warning'}>{s.isActive ? 'Active' : 'Inactive'}</Badge>
-              </div>
-            ))}
+            <motion.div
+              className="contents"
+              variants={staggerContainer}
+              initial="hidden"
+              animate="visible"
+            >
+              {schools.map((s) => (
+                <motion.div
+                  key={s.id}
+                  variants={fadeSlideUp}
+                  className="flex items-center justify-between gap-2 rounded-lg border p-3 transition-colors hover:bg-accent"
+                  whileHover={{ x: 2 }}
+                >
+                  <div className="min-w-0">
+                    <p className="truncate font-medium">{s.name}</p>
+                    <p className="text-xs text-muted-foreground">{s.schoolCode} · {s.plan}</p>
+                  </div>
+                  <Badge variant={s.isActive ? 'success' : 'warning'}>{s.isActive ? 'Active' : 'Inactive'}</Badge>
+                </motion.div>
+              ))}
+            </motion.div>
           </CardContent>
         </Card>
       )}
@@ -118,9 +154,9 @@ export function SuperAdminPanel() {
   );
 }
 
-// ── SCHOOL_ADMIN ───────────────────────────────────────────────────────────
+// ── ORGANISER ───────────────────────────────────────────────────────────────
 
-export function SchoolAdminPanel() {
+export function OrganiserPanel() {
   const {
     data: classes = [],
     isLoading: classesLoading,
@@ -157,7 +193,14 @@ export function SchoolAdminPanel() {
 
       <div className="grid gap-6 lg:grid-cols-2">
         <section>
-          <h2 className="mb-3 text-sm font-semibold text-muted-foreground">Recent classes</h2>
+          <motion.h2
+            className="mb-3 text-sm font-semibold text-muted-foreground"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.2 }}
+          >
+            Recent classes
+          </motion.h2>
           {classesLoading ? (
             <Skeleton className="h-40" />
           ) : classesError ? (
@@ -165,24 +208,38 @@ export function SchoolAdminPanel() {
           ) : classes.length === 0 ? (
             <EmptyState icon={GraduationCap} title="No classes yet" description="Create a class to start enrolling students." />
           ) : (
-            <div className="space-y-2">
+            <motion.div
+              className="space-y-2"
+              variants={staggerContainer}
+              initial="hidden"
+              animate="visible"
+            >
               {classes.slice(0, 5).map((c) => (
-                <Link key={c.id} to={`/classes/${c.id}`} className="block rounded-lg border p-3 transition-colors hover:bg-accent">
-                  <div className="flex items-center justify-between">
-                    <p className="font-medium">{c.name}</p>
-                    <span className="text-xs text-muted-foreground">{c.academicYear}</span>
-                  </div>
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    {c.teacher ? `Teacher: ${c.teacher.name}` : 'No teacher assigned'} · {c._count?.enrollments ?? 0} students
-                  </p>
-                </Link>
+                <motion.div key={c.id} variants={fadeSlideUp}>
+                  <Link to={`/classes/${c.id}`} className="block rounded-lg border p-3 transition-colors hover:bg-accent">
+                    <div className="flex items-center justify-between">
+                      <p className="font-medium">{c.name}</p>
+                      <span className="text-xs text-muted-foreground">{c.academicYear}</span>
+                    </div>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      {c.teacher ? `Teacher: ${c.teacher.name}` : 'No teacher assigned'} · {c._count?.enrollments ?? 0} students
+                    </p>
+                  </Link>
+                </motion.div>
               ))}
-            </div>
+            </motion.div>
           )}
         </section>
 
         <section>
-          <h2 className="mb-3 text-sm font-semibold text-muted-foreground">Courses</h2>
+          <motion.h2
+            className="mb-3 text-sm font-semibold text-muted-foreground"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.25 }}
+          >
+            Courses
+          </motion.h2>
           {coursesLoading ? (
             <Skeleton className="h-40" />
           ) : coursesError ? (
@@ -228,7 +285,14 @@ export function TeacherPanel() {
       </div>
 
       <section>
-        <h2 className="mb-3 text-sm font-semibold text-muted-foreground">Your courses</h2>
+        <motion.h2
+          className="mb-3 text-sm font-semibold text-muted-foreground"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.2 }}
+        >
+          Your courses
+        </motion.h2>
         {isLoading ? (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">{[0, 1, 2].map((i) => <Skeleton key={i} className="h-40" />)}</div>
         ) : error ? (
@@ -274,7 +338,14 @@ export function StudentPanel() {
       </div>
 
       <section>
-        <h2 className="mb-3 text-sm font-semibold text-muted-foreground">Available courses</h2>
+        <motion.h2
+          className="mb-3 text-sm font-semibold text-muted-foreground"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.2 }}
+        >
+          Available courses
+        </motion.h2>
         {isLoading ? (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">{[0, 1, 2].map((i) => <Skeleton key={i} className="h-40" />)}</div>
         ) : error ? (
@@ -288,12 +359,19 @@ export function StudentPanel() {
         ) : (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {published.map((c, i) => (
-              <motion.div key={c.id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.25, delay: i * 0.04 }}>
+              <motion.div
+                key={c.id}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.3, delay: i * 0.04 }}
+                whileHover={{ y: -5, scale: 1.02, transition: { duration: 0.2, ease: 'easeOut' } }}
+                whileTap={{ scale: 0.98 }}
+              >
                 <Link to={`/courses/${c.id}/learn`} className="block group">
-                  <Card className={cn('h-full transition-shadow hover:shadow-md')}>
+                  <Card className={cn('h-full transition-shadow hover:shadow-lg hover:border-primary/20')}>
                     <CardContent className="flex h-full flex-col gap-3 p-5">
                       <Badge variant={statusTone[c.status]}>{c.status}</Badge>
-                      <h3 className="font-semibold leading-snug group-hover:text-primary">{c.title}</h3>
+                      <h3 className="font-semibold leading-snug transition-colors group-hover:text-primary">{c.title}</h3>
                       <p className="mt-auto line-clamp-2 text-sm text-muted-foreground">
                         {c.description ?? 'No description yet.'}
                       </p>
@@ -305,6 +383,102 @@ export function StudentPanel() {
           </div>
         )}
       </section>
+    </div>
+  );
+}
+
+export function CoordinatorPanel() {
+  const { data, isLoading, error, refetch } = useCoordinatorWorkspace();
+  const divisions = data?.divisions ?? [];
+  const schools = divisions.flatMap((division) => division.schools);
+  const activeSchools = schools.filter((school) => school.isActive).length;
+  const totalStudents = schools.reduce((total, school) => total + school.studentCounts.total, 0);
+
+  return (
+    <div className="space-y-6">
+      <PageHeader
+        title="Coordinator workspace"
+        description="Division access is limited to the divisions assigned to your account."
+      />
+      <div className="grid gap-4 sm:grid-cols-3">
+        <StatCard icon={Building2} label="Assigned divisions" value={isLoading || error ? '…' : divisions.length} delay={0} />
+        <StatCard icon={GraduationCap} label="Assigned schools" value={isLoading || error ? '…' : schools.length} hint={`${activeSchools} active`} delay={0.05} />
+        <StatCard icon={Users} label="Students in scope" value={isLoading || error ? '…' : totalStudents} hint="Counts only; no financial details" delay={0.1} />
+      </div>
+      {isLoading ? (
+        <div className="grid gap-4 md:grid-cols-2">{[0, 1].map((index) => <Skeleton key={index} className="h-40" />)}</div>
+      ) : error ? (
+        <ErrorState onRetry={() => void refetch()} />
+      ) : divisions.length === 0 ? (
+        <EmptyState
+          icon={Building2}
+          title="No divisions assigned"
+          description="An Admin must assign your coordinator account to a division before school summaries are available."
+        />
+      ) : (
+        <motion.div
+          className="space-y-5"
+          variants={staggerContainer}
+          initial="hidden"
+          animate="visible"
+        >
+          {divisions.map((division) => (
+            <motion.section key={division.id} variants={fadeSlideUp} className="space-y-3">
+              <div>
+                <h2 className="text-lg font-semibold">{division.name}</h2>
+                <p className="text-sm text-muted-foreground">
+                  {division.code}{division.region ? ` · ${division.region}` : ''}
+                </p>
+              </div>
+              {division.schools.length ? (
+                <div className="grid gap-4 md:grid-cols-2">
+                  {division.schools.map((school) => (
+                    <motion.div
+                      key={school.id}
+                      whileHover={{ y: -3, transition: { duration: 0.2 } }}
+                    >
+                      <Card>
+                        <CardHeader className="pb-3">
+                          <CardTitle className="flex items-center justify-between gap-3 text-base">
+                            <span>{school.name}</span>
+                            <Badge variant={school.isActive ? 'success' : 'secondary'}>
+                              {school.isActive ? 'Active' : 'Inactive'}
+                            </Badge>
+                          </CardTitle>
+                          <p className="text-sm text-muted-foreground">
+                            {school.schoolCode}{school.city ? ` · ${school.city}` : ''}
+                          </p>
+                        </CardHeader>
+                        <CardContent className="space-y-3">
+                          <div className="grid grid-cols-3 gap-2 text-center text-sm">
+                            <div><p className="font-semibold">{school.studentCounts.total}</p><p className="text-muted-foreground">Students</p></div>
+                            <div><p className="font-semibold">{school.studentCounts.active}</p><p className="text-muted-foreground">Active</p></div>
+                            <div><p className="font-semibold">{school.classes.length}</p><p className="text-muted-foreground">Classes</p></div>
+                          </div>
+                          {school.classes.length ? (
+                            <ul className="space-y-1 border-t pt-2 text-sm text-muted-foreground">
+                              {school.classes.map((klass) => (
+                                <li key={klass.id} className="flex justify-between gap-3">
+                                  <span>{klass.name} · {klass.academicYear}</span>
+                                  <span>{klass.studentCount} students</span>
+                                </li>
+                              ))}
+                            </ul>
+                          ) : (
+                            <p className="border-t pt-2 text-sm text-muted-foreground">No classes recorded.</p>
+                          )}
+                        </CardContent>
+                      </Card>
+                    </motion.div>
+                  ))}
+                </div>
+              ) : (
+                <EmptyState icon={Building2} title="No schools in this division" description="An Admin can add schools to the division." />
+              )}
+            </motion.section>
+          ))}
+        </motion.div>
+      )}
     </div>
   );
 }
