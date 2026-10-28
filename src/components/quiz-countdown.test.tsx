@@ -19,6 +19,11 @@ describe('formatRemaining', () => {
   it('drops sub-second precision and floors', () => {
     expect(formatRemaining(59_999)).toBe('0:59');
   });
+
+  it('treats non-finite values as expired', () => {
+    expect(formatRemaining(Number.NaN)).toBe('0:00');
+    expect(formatRemaining(Number.POSITIVE_INFINITY)).toBe('0:00');
+  });
 });
 
 describe('QuizCountdown', () => {
@@ -39,5 +44,13 @@ describe('QuizCountdown', () => {
 
     expect(screen.getByRole('timer')).toHaveAttribute('aria-label', 'Time remaining');
     expect(screen.getByText(/^\d+:\d{2}$/)).toBeInTheDocument();
+  });
+
+  it('treats invalid expiry timestamps as expired immediately', () => {
+    const onExpire = vi.fn();
+    render(<QuizCountdown expiresAt="not-a-date" onExpire={onExpire} />);
+
+    expect(screen.getByText('Time expired')).toBeInTheDocument();
+    expect(onExpire).toHaveBeenCalledTimes(1);
   });
 });

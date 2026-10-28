@@ -13,6 +13,10 @@ import { cn } from '@/lib/utils';
  */
 
 export function formatRemaining(ms: number): string {
+  if (!Number.isFinite(ms)) {
+    return '0:00';
+  }
+
   const total = Math.max(0, Math.floor(ms / 1000));
   const minutes = Math.floor(total / 60);
   const seconds = total % 60;
@@ -36,7 +40,8 @@ export function QuizCountdown({ expiresAt, onExpire, className }: QuizCountdownP
     return () => clearInterval(id);
   }, []);
 
-  const remaining = new Date(expiresAt).getTime() - now;
+  const expiresAtMs = new Date(expiresAt).getTime();
+  const remaining = Number.isFinite(expiresAtMs) ? expiresAtMs - now : -1;
   const expired = remaining <= 0;
 
   useEffect(() => {
