@@ -15,23 +15,32 @@ export const getRedis = (): RedisClientType | null => client;
 
 export const connectRedis = async (): Promise<void> => {
   if (!config.redisUrl) {
-    if (config.nodeEnv === 'production') {
-      throw new Error(
-        'FATAL: REDIS_URL is required in production. Without it, rate limits are per-process and effectively unenforced across replicas.'
-      );
-    }
-    logger.warn('REDIS_URL not set — rate limits fall back to per-process memory (development only).');
+    logger.warn('REDIS_URL not set — rate limits fall back to per-process memory.');
+    return;
+  }
+
+  if (client) {
     return;
   }
 
   const redis: RedisClientType = createClient({ url: config.redisUrl });
 
-  // Without a handler an emitted 'error' would crash the process.
-  redis.on('error', (err) => logger.error('Redis error', err));
+  // Without a handler an emitted 'error' would crash the process; this is an
+  // operational warning rather than a fatal boot failure because the limiter can
+  // fall back to an in-memory store without taking the API offline.
+  redis.on('error', (err) => {
+    logger.error('Redis error; falling back to in-memory rate limits', err);
+  });
 
-  await redis.connect();
-  client = redis;
-  logger.info('Redis connected');
+  try {
+    await redis.connect();
+    client = redis;
+    logger.info('Redis connected');
+  } catch (err) {
+    logger.warn('Redis unavailable; continuing with in-memory rate limits', err);
+    client = null;
+    await redis.quit().catch(() => undefined);
+  }
 };
 
 export const disconnectRedis = async (): Promise<void> => {

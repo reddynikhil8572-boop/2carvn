@@ -25,14 +25,13 @@ const inProduction = <T extends (...args: any[]) => any>(limiter: T) =>
  * evaluated and Redis connects later during startup.
  */
 const makeStore = (prefix: string): Store | undefined => {
-  if (!config.redisUrl) return undefined; // MemoryStore; dev only, see db/redis.ts
+  if (!config.redisUrl || !getRedis()) return undefined; // MemoryStore fallback when Redis is offline.
 
   return new RedisStore({
     prefix,
     sendCommand: (...args: string[]) => {
       const client = getRedis();
       if (!client) {
-        // Refuse rather than silently degrading to unlimited.
         return Promise.reject(new Error('Redis unavailable for rate limiting'));
       }
       return client.sendCommand(args) as Promise<any>;

@@ -37,7 +37,8 @@ export const config = {
   directDatabaseUrl: process.env.DIRECT_DATABASE_URL || '',
 
   // Redis — backs rate-limit counters so they are shared across instances.
-  // Required in production; see db/redis.ts.
+  // Optional: if it is unset or unreachable the API falls back to in-memory
+  // rate limiting rather than refusing to boot.
   redisUrl: process.env.REDIS_URL || '',
 
   // JWT
