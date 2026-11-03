@@ -1,5 +1,4 @@
 import { Navigate, useLocation } from 'react-router-dom';
-import { Loader2 } from 'lucide-react';
 
 import { useSession } from '@/hooks/useAuth';
 import { useAuthUser } from '@/stores/auth';
@@ -44,7 +43,14 @@ export function CenteredLoader({ label }: { label?: string }) {
   return (
     <div className="flex min-h-screen w-full items-center justify-center" role="status">
       <div className="flex flex-col items-center gap-2 text-muted-foreground">
-        <Loader2 className="h-6 w-6 animate-spin text-primary" />
+        <img
+          src="/brand-mark.png"
+          alt=""
+          aria-hidden="true"
+          width={180}
+          height={262}
+          className="h-16 w-16 animate-pulse object-contain"
+        />
         {label ? <span className="text-sm">{label}</span> : <span className="sr-only">Loading</span>}
       </div>
     </div>

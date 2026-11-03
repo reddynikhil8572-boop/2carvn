@@ -57,7 +57,7 @@ export function TwoFactorPage() {
     return (
       <AuthLayout
         footer={
-          <Link className="font-medium text-primary hover:underline" to="/login">
+          <Link className="font-medium text-amber-700 hover:text-amber-600 hover:underline dark:text-amber-300" to="/login">
             Back to sign in
           </Link>
         }
@@ -87,13 +87,13 @@ export function TwoFactorPage() {
   return (
     <AuthLayout
       footer={
-        <Link className="font-medium text-primary hover:underline" to="/login">
+        <Link className="font-medium text-amber-700 hover:text-amber-600 hover:underline dark:text-amber-300" to="/login">
           Use a different account
         </Link>
       }
     >
       <div className="mb-6 flex items-start gap-3">
-        <ShieldCheck className="mt-0.5 h-6 w-6 text-primary" aria-hidden />
+        <ShieldCheck className="mt-0.5 h-6 w-6 text-amber-600 dark:text-amber-300" aria-hidden />
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Two-factor verification</h1>
           <p className="mt-1 text-sm text-muted-foreground">
@@ -143,7 +143,11 @@ export function TwoFactorPage() {
               </FormItem>
             )}
           />
-          <Button type="submit" className="w-full" disabled={verify.isPending}>
+          <Button
+            type="submit"
+            className="w-full bg-amber-400 text-slate-950 hover:bg-amber-300"
+            disabled={verify.isPending}
+          >
             {verify.isPending ? 'Verifying…' : 'Verify'}
           </Button>
         </form>

@@ -16,5 +16,5 @@ export const env = {
       ? `${window.location.protocol}//${window.location.hostname}:5000`
       : window.location.origin;
   })(),
-  appName: import.meta.env.VITE_APP_NAME ?? '2carvn',
+  appName: import.meta.env.VITE_APP_NAME ?? '2CaRvN',
 } as const;

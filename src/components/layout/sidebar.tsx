@@ -1,9 +1,8 @@
-import { NavLink } from 'react-router-dom';
+import { Link, NavLink } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { GraduationCap } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
-import { navFor } from '@/components/layout/nav';
+import { defaultRouteFor, navFor } from '@/components/layout/nav';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import type { UserRole } from '@/types/api';
@@ -23,24 +22,36 @@ const navItemVariants = {
   }),
 };
 
-export function Sidebar({ role, brand = '2carvn' }: SidebarProps) {
+export function Sidebar({ role, brand = '2CaRvN' }: SidebarProps) {
   const groups = navFor(role);
 
   return (
     <div className="flex h-full flex-col">
       <motion.div
-        className="flex h-16 shrink-0 items-center gap-2 px-6"
+        className="flex h-16 shrink-0 items-center px-6"
         initial={{ opacity: 0, y: -8 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
       >
-        <motion.span
-          className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground"
-          whileHover={{ rotate: [0, -10, 10, 0], scale: 1.1, transition: { duration: 0.4 } }}
+        <Link
+          to={defaultRouteFor(role)}
+          className="flex items-center gap-2"
+          aria-label="2CaRvN home"
         >
-          <GraduationCap className="h-4 w-4" aria-hidden />
-        </motion.span>
-        <span className="text-base font-semibold tracking-tight">{brand}</span>
+          <motion.span
+            className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-lg bg-slate-950 ring-1 ring-white/10"
+            whileHover={{ scale: 1.08, transition: { duration: 0.2 } }}
+          >
+            <img
+              src="/brand-mark-light.png"
+              alt=""
+              width={180}
+              height={262}
+              className="h-6 w-auto object-contain"
+            />
+          </motion.span>
+          <span className="text-base font-semibold tracking-tight">{brand}</span>
+        </Link>
       </motion.div>
       <Separator />
       <ScrollArea className="flex-1">

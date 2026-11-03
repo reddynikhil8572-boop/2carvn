@@ -80,7 +80,7 @@ export function LoginPage() {
     <AuthLayout
       footer={
         <>
-          <Link className="font-medium text-primary hover:underline" to="/forgot-password">
+          <Link className="font-medium text-amber-700 hover:text-amber-600 hover:underline dark:text-amber-300" to="/forgot-password">
             Forgot your password?
           </Link>
         </>
@@ -170,7 +170,11 @@ export function LoginPage() {
               </FormItem>
             )}
           />
-          <Button type="submit" className="w-full" disabled={login.isPending}>
+          <Button
+            type="submit"
+            className="w-full bg-amber-400 text-slate-950 hover:bg-amber-300"
+            disabled={login.isPending}
+          >
             {login.isPending ? 'Signing in…' : 'Sign in'}
           </Button>
         </form>

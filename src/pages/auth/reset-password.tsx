@@ -70,7 +70,7 @@ export function ResetPasswordPage() {
     return (
       <AuthLayout
         footer={
-          <Link className="font-medium text-primary hover:underline" to="/login">
+          <Link className="font-medium text-amber-700 hover:text-amber-600 hover:underline dark:text-amber-300" to="/login">
             Sign in now
           </Link>
         }
@@ -91,7 +91,7 @@ export function ResetPasswordPage() {
       footer={
         <>
           Remembered it?{' '}
-          <Link className="font-medium text-primary hover:underline" to="/login">
+          <Link className="font-medium text-amber-700 hover:text-amber-600 hover:underline dark:text-amber-300" to="/login">
             Back to sign in
           </Link>
         </>
@@ -140,7 +140,11 @@ export function ResetPasswordPage() {
               </FormItem>
             )}
           />
-          <Button type="submit" className="w-full" disabled={reset.isPending}>
+          <Button
+            type="submit"
+            className="w-full bg-amber-400 text-slate-950 hover:bg-amber-300"
+            disabled={reset.isPending}
+          >
             {reset.isPending ? 'Saving…' : 'Set new password'}
           </Button>
         </form>
@@ -153,7 +157,7 @@ function InvalidToken() {
   return (
     <AuthLayout
       footer={
-        <Link className="font-medium text-primary hover:underline" to="/forgot-password">
+        <Link className="font-medium text-amber-700 hover:text-amber-600 hover:underline dark:text-amber-300" to="/forgot-password">
           Request a new link
         </Link>
       }

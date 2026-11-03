@@ -56,7 +56,7 @@ export function AppShell() {
           animate={{ opacity: 1 }}
           transition={{ delay: 0.5, duration: 0.4 }}
         >
-          2carvn · Multi-tenant education platform
+          2CaRvN · Multi-tenant education platform
         </motion.footer>
       </div>
     </div>

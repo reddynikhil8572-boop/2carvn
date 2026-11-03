@@ -57,7 +57,7 @@ export function ForgotPasswordPage() {
       footer={
         <>
           Remembered it?{' '}
-          <Link className="font-medium text-primary hover:underline" to="/login">
+          <Link className="font-medium text-amber-700 hover:text-amber-600 hover:underline dark:text-amber-300" to="/login">
             Back to sign in
           </Link>
         </>
@@ -74,7 +74,7 @@ export function ForgotPasswordPage() {
             we've emailed a reset link. It expires after a short window — use it soon.
           </p>
           <Link
-            className="inline-block text-sm font-medium text-primary hover:underline"
+            className="inline-block text-sm font-medium text-amber-700 hover:text-amber-600 hover:underline dark:text-amber-300"
             to="/login"
           >
             Return to sign in
@@ -134,7 +134,11 @@ export function ForgotPasswordPage() {
                   </FormItem>
                 )}
               />
-              <Button type="submit" className="w-full" disabled={requestReset.isPending}>
+              <Button
+                type="submit"
+                className="w-full bg-amber-400 text-slate-950 hover:bg-amber-300"
+                disabled={requestReset.isPending}
+              >
                 {requestReset.isPending ? 'Sending link…' : 'Send reset link'}
               </Button>
             </form>
